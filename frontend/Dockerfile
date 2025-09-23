@@ -6,11 +6,10 @@ WORKDIR /app
 ENV LIGHTNINGCSS_USE_WASM=true
 
 COPY package*.json ./
-RUN npm ci 
+RUN npm ci
 
 COPY . .
-RUN npm run build
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]

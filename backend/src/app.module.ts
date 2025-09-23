@@ -1,26 +1,25 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { DatabaseModule } from './database/database.module';
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { ContentModule } from './modules/content/content.module';
+// import { AIModule } from './modules/ai/ai.module';
+// import { WebSocketsModule } from './modules/websockets/websockets.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT) || 5432,
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      database: process.env.DB_NAME || 'ai_content_workflow',
-      autoLoadEntities: true,
-      synchronize: process.env.NODE_ENV !== 'production',
-    }),
+    DatabaseModule,// Connects to PostgreSQL
+    CampaignsModule,// Campaign CRUD operations
+    ContentModule,// Content management
+    // AIModule,
+    // WebSocketsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}
+

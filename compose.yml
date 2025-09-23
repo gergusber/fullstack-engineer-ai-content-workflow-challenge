@@ -40,6 +40,7 @@ services:
       - DB_USERNAME=postgres
       - DB_PASSWORD=password
       - DB_NAME=ai_content_workflow
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/ai_content_workflow
       - REDIS_URL=redis://redis:6379
       - NODE_ENV=development
       - PORT=3001
@@ -50,9 +51,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # volumes:
-    #   - ./backend:/app
-    #   - /app/node_modules
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
 
   frontend:
     build:
@@ -62,6 +63,7 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_BACKEND_URL=http://localhost:3001
+      - NODE_ENV=development
     depends_on:
       - backend
     volumes:
