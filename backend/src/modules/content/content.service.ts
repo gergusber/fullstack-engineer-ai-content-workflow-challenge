@@ -6,13 +6,14 @@ import {
   ReviewState,
   ContentType,
 } from "../../database/entities/content-piece.entity";
-import { AIDraft } from "../../database/entities/ai-draft.entity";
+import { AIDraft, DraftStatus } from "../../database/entities/ai-draft.entity";
 import { Review } from "../../database/entities/review.entity";
 import { ContentVersion } from "../../database/entities/content-version.entity";
 import { CreateContentPieceDto } from "./dto/create-content-piece.dto";
 import { UpdateContentPieceDto } from "./dto/update-content-piece.dto";
 import { UpdateReviewStateDto } from "./dto/update-review-state.dto";
 import { ContentFiltersDto } from "./dto/content-filters.dto";
+import { CreateAIDraftDto } from "./dto/create-ai-draft.dto";
 
 @Injectable()
 export class ContentService {
@@ -135,7 +136,7 @@ export class ContentService {
     await this.reviewRepository.save(review);
 
     // Update published date if approved
-    if (updateStateDto.newState === ReviewState.PUBLISHED) {
+    if (updateStateDto.newState === ReviewState.APPROVED) {
       content.publishedAt = new Date();
     }
 
@@ -566,16 +567,16 @@ export class ContentService {
     });
   }
 
-  async getReviewHistory(contentId: string): Promise<Review[]> {
-    return await this.reviewRepository.find({
-      where: { contentPieceId: contentId },
-      order: { createdAt: "DESC" },
-    });
-  }
-  async createAIDraft(createDraftDto: any): Promise<AIDraft> {
-    const draft = this.aiDraftRepository.create(createDraftDto);
-    return await this.aiDraftRepository.save(draft)[0];
-  }
+  // async getReviewHistory(contentId: string): Promise<Review[]> {
+  //   return await this.reviewRepository.find({
+  //     where: { contentPieceId: contentId },
+  //     order: { createdAt: "DESC" },
+  //   });
+  // }
+  // async createAIDraft(createDraftDto: any): Promise<AIDraft> {
+  //   const draft = this.aiDraftRepository.create(createDraftDto);
+  //   return await this.aiDraftRepository.save(draft)[0];
+  // }
 
   // async getContentAnalytics(contentId: string): Promise<any> {
   //   const content = await this.findOne(contentId);
@@ -641,5 +642,274 @@ export class ContentService {
     const data = await queryBuilder.getMany();
 
     return { data, total };
+  }
+
+  // New methods for enhanced functionality
+
+  async createTranslation(
+    sourceContentId: string,
+    createDto: CreateContentPieceDto
+  ): Promise<ContentPiece> {
+    const sourceContent = await this.findOne(sourceContentId);
+
+    const translationDto = {
+      ...createDto,
+      translationOf: sourceContentId,
+      sourceLanguage: sourceContent.targetLanguage,
+    };
+
+    return await this.create(translationDto);
+  }
+
+  async findTranslations(contentId: string): Promise<ContentPiece[]> {
+    return await this.contentRepository.find({
+      where: { translationOf: contentId },
+      relations: {
+        campaign: true,
+        aiDrafts: true,
+        reviews: true,
+      },
+      order: {
+        targetLanguage: 'ASC',
+      },
+    });
+  }
+
+  async updateWithVersionHistory(
+    id: string,
+    updateDto: UpdateContentPieceDto & { editedBy: string }
+  ): Promise<ContentPiece> {
+    const content = await this.findOne(id);
+
+    // If finalText is being updated, add to version history
+    if (updateDto.finalText && updateDto.finalText !== content.finalText) {
+      const currentHistory = content.versionHistory || [];
+      const newVersion = {
+        version: currentHistory.length + 1,
+        text: updateDto.finalText,
+        editedBy: updateDto.editedBy,
+        editedAt: new Date(),
+        changeReason: updateDto.changeReason || 'Content updated',
+      };
+
+      updateDto.versionHistory = [...currentHistory, newVersion];
+    }
+
+    Object.assign(content, updateDto);
+    return await this.contentRepository.save(content);
+  }
+
+  async findByLanguage(targetLanguage: string): Promise<ContentPiece[]> {
+    return await this.contentRepository.find({
+      where: { targetLanguage },
+      relations: {
+        campaign: true,
+        aiDrafts: true,
+      },
+      order: {
+        updatedAt: 'DESC',
+      },
+    });
+  }
+
+  async getTranslationChain(contentId: string): Promise<{
+    source: ContentPiece | null;
+    translations: ContentPiece[];
+  }> {
+    const content = await this.findOne(contentId);
+
+    let source: ContentPiece | null = null;
+    if (content.translationOf) {
+      source = await this.findOne(content.translationOf);
+    } else {
+      source = content;
+    }
+
+    const translations = await this.findTranslations(source.id);
+
+    return { source, translations };
+  }
+
+  // AIDraft methods
+
+  async createAIDraft(createDto: CreateAIDraftDto): Promise<AIDraft> {
+    const contentPiece = await this.findOne(createDto.contentPieceId);
+
+    const aiDraft = this.aiDraftRepository.create({
+      ...createDto,
+      status: createDto.status || DraftStatus.CANDIDATE,
+    });
+
+    const savedDraft = await this.aiDraftRepository.save(aiDraft);
+
+    // If this draft is marked as selected, mark others as candidates
+    if (savedDraft.status === DraftStatus.SELECTED) {
+      await this.selectAIDraft(savedDraft.id);
+    }
+
+    return savedDraft;
+  }
+
+  async selectAIDraft(draftId: string): Promise<AIDraft> {
+    const draft = await this.aiDraftRepository.findOne({
+      where: { id: draftId },
+    });
+
+    if (!draft) {
+      throw new NotFoundException(`AI Draft with ID ${draftId} not found`);
+    }
+
+    // Mark all other drafts for this content piece as candidates
+    await this.aiDraftRepository.update(
+      {
+        contentPieceId: draft.contentPieceId,
+        status: DraftStatus.SELECTED,
+      },
+      { status: DraftStatus.CANDIDATE }
+    );
+
+    // Mark this draft as selected
+    draft.status = DraftStatus.SELECTED;
+    return await this.aiDraftRepository.save(draft);
+  }
+
+  async discardAIDraft(draftId: string): Promise<AIDraft> {
+    const draft = await this.aiDraftRepository.findOne({
+      where: { id: draftId },
+    });
+
+    if (!draft) {
+      throw new NotFoundException(`AI Draft with ID ${draftId} not found`);
+    }
+
+    draft.status = DraftStatus.DISCARDED;
+    return await this.aiDraftRepository.save(draft);
+  }
+
+  async findAIDraftsByContentPiece(contentPieceId: string): Promise<AIDraft[]> {
+    return await this.aiDraftRepository.find({
+      where: { contentPieceId },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+  }
+
+  async findAIDraftsByStatus(
+    contentPieceId: string,
+    status: DraftStatus
+  ): Promise<AIDraft[]> {
+    return await this.aiDraftRepository.find({
+      where: { contentPieceId, status },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+  }
+
+  async getAIDraftMetrics(contentPieceId: string): Promise<{
+    totalDrafts: number;
+    selectedDrafts: number;
+    candidateDrafts: number;
+    discardedDrafts: number;
+    avgResponseTime: number;
+    avgCost: number;
+    avgQualityScore: number;
+  }> {
+    const drafts = await this.findAIDraftsByContentPiece(contentPieceId);
+
+    const selected = drafts.filter(d => d.status === DraftStatus.SELECTED);
+    const candidates = drafts.filter(d => d.status === DraftStatus.CANDIDATE);
+    const discarded = drafts.filter(d => d.status === DraftStatus.DISCARDED);
+
+    const validResponseTimes = drafts.filter(d => d.responseTimeMs);
+    const validCosts = drafts.filter(d => d.costUsd);
+    const validQualityScores = drafts.filter(d => d.qualityScore);
+
+    return {
+      totalDrafts: drafts.length,
+      selectedDrafts: selected.length,
+      candidateDrafts: candidates.length,
+      discardedDrafts: discarded.length,
+      avgResponseTime: validResponseTimes.length > 0
+        ? validResponseTimes.reduce((sum, d) => sum + d.responseTimeMs, 0) / validResponseTimes.length
+        : 0,
+      avgCost: validCosts.length > 0
+        ? validCosts.reduce((sum, d) => sum + d.costUsd, 0) / validCosts.length
+        : 0,
+      avgQualityScore: validQualityScores.length > 0
+        ? validQualityScores.reduce((sum, d) => sum + d.qualityScore, 0) / validQualityScores.length
+        : 0,
+    };
+  }
+
+  // Review methods
+
+  async findReviewsByContentPiece(contentPieceId: string): Promise<Review[]> {
+    return await this.reviewRepository.find({
+      where: { contentPieceId },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+  }
+
+  async getReviewHistory(contentPieceId: string): Promise<{
+    reviews: Review[];
+    stateTransitions: Array<{
+      from: ReviewState;
+      to: ReviewState;
+      action: string;
+      reviewer: string;
+      date: Date;
+      comments?: string;
+    }>;
+  }> {
+    const reviews = await this.findReviewsByContentPiece(contentPieceId);
+
+    const stateTransitions = reviews.map(review => ({
+      from: review.previousState,
+      to: review.newState,
+      action: review.action,
+      reviewer: review.reviewerName || review.reviewerId || 'Unknown',
+      date: review.createdAt,
+      comments: review.comments,
+    }));
+
+    return { reviews, stateTransitions };
+  }
+
+  async approveContent(
+    contentPieceId: string,
+    reviewerId: string,
+    reviewerName: string,
+    comments?: string
+  ): Promise<ContentPiece> {
+    return await this.updateReviewState(contentPieceId, {
+      newState: ReviewState.APPROVED,
+      reviewType: 'content_review' as any,
+      action: 'approve' as any,
+      comments,
+      reviewerId,
+      reviewerName,
+      reviewerRole: 'approver',
+    });
+  }
+
+  async rejectContent(
+    contentPieceId: string,
+    reviewerId: string,
+    reviewerName: string,
+    comments: string
+  ): Promise<ContentPiece> {
+    return await this.updateReviewState(contentPieceId, {
+      newState: ReviewState.REJECTED,
+      reviewType: 'content_review' as any,
+      action: 'reject' as any,
+      comments,
+      reviewerId,
+      reviewerName,
+      reviewerRole: 'reviewer',
+    });
   }
 }

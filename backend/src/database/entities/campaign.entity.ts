@@ -8,7 +8,6 @@ import {
   Index,
 } from 'typeorm';
 import { ContentPiece } from './content-piece.entity';
-import { Review } from './review.entity';
 
 export enum CampaignStatus {
   DRAFT = 'draft',
@@ -61,7 +60,4 @@ export class Campaign {
     cascade: true,
   })
   contentPieces: ContentPiece[];
-
-  @OneToMany(() => Review, (review) => review.campaign)
-  reviews: Review[];
 }

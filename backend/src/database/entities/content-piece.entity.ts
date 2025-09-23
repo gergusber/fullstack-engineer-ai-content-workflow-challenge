@@ -34,8 +34,6 @@ export enum ReviewState {
   REVIEWED = 'reviewed',
   APPROVED = 'approved',
   REJECTED = 'rejected',
-  NEEDS_REVISION = 'needs_revision',
-  PUBLISHED = 'published',
 }
 
 export enum Priority {

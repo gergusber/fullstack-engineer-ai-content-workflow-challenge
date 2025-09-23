@@ -6,7 +6,7 @@ import {
   ReviewState,
   Priority,
 } from "../entities/content-piece.entity";
-import { AIDraft, AIModel, GenerationType } from "../entities/ai-draft.entity";
+import { AIDraft, AIModel, GenerationType, DraftStatus } from "../entities/ai-draft.entity";
 import { Review, ReviewType, ReviewAction } from "../entities/review.entity";
 
 export class DatabaseSeeder {
@@ -96,15 +96,18 @@ export class DatabaseSeeder {
       modelUsed: AIModel.CLAUDE_3_SONNET,
       modelVersion: "claude-3-5-sonnet-20241022",
       generationType: GenerationType.ORIGINAL,
-      generatedTitle: "Black Friday Mega Sale - Save Up To 70% on Electronics!",
-      generatedDesc:
-        "Don't miss out on the biggest sale of the year! Get incredible discounts on laptops, smartphones, headphones, and more. Limited time offer - shop now before it's too late!",
+      generatedContent: {
+        title: "Black Friday Mega Sale - Save Up To 70% on Electronics!",
+        description: "Don't miss out on the biggest sale of the year! Get incredible discounts on laptops, smartphones, headphones, and more. Limited time offer - shop now before it's too late!"
+      },
+      status: DraftStatus.SELECTED,
       prompt:
         "Create a compelling Black Friday headline that emphasizes urgency and savings",
       temperature: 0.7,
       maxTokens: 100,
-      responseTime: 1250,
+      responseTimeMs: 1250,
       tokenCount: 45,
+      costUsd: 0.025,
       qualityScore: 0.89,
       userRating: 4,
     });
@@ -149,14 +152,17 @@ export class DatabaseSeeder {
       modelUsed: AIModel.OPENAI_GPT4,
       modelVersion: "gpt-4",
       generationType: GenerationType.ORIGINAL,
-      generatedTitle: "🎁 Perfect Holiday Gifts for Everyone on Your List",
-      generatedDesc:
-        "Discover thoughtfully curated gift ideas for every personality and budget in our comprehensive holiday guide.",
+      generatedContent: {
+        title: "🎁 Perfect Holiday Gifts for Everyone on Your List",
+        description: "Discover thoughtfully curated gift ideas for every personality and budget in our comprehensive holiday guide."
+      },
+      status: DraftStatus.SELECTED,
       prompt: "Create an engaging email subject line for holiday gift guide",
       temperature: 0.6,
       maxTokens: 50,
-      responseTime: 980,
+      responseTimeMs: 980,
       tokenCount: 28,
+      costUsd: 0.018,
       qualityScore: 0.92,
       userRating: 5,
     });
@@ -259,19 +265,23 @@ export class DatabaseSeeder {
       },
     ];
 
-    for (const draft of drafts) {
+    for (const [index, draft] of drafts.entries()) {
       const aiDraft = aiDraftRepo.create({
         contentPieceId: savedContent.id,
         modelUsed: draft.model,
         generationType: GenerationType.ORIGINAL,
-        generatedTitle: draft.title,
-        generatedDesc: draft.desc,
+        generatedContent: {
+          title: draft.title,
+          description: draft.desc
+        },
+        status: index === 0 ? DraftStatus.SELECTED : DraftStatus.CANDIDATE,
         prompt:
           "Write a compelling product description for an AI assistant that helps with daily tasks",
         temperature: 0.7,
         maxTokens: 200,
-        responseTime: draft.responseTime,
+        responseTimeMs: draft.responseTime,
         tokenCount: Math.floor(draft.desc.length / 4),
+        costUsd: draft.responseTime > 1500 ? 0.045 : 0.032,
         qualityScore: draft.quality,
       });
 

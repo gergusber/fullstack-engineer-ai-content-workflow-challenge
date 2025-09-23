@@ -46,7 +46,6 @@ export class CampaignsService {
             // Only current versions
           },
         },
-        reviews: true,
       },
     });
 
@@ -122,6 +121,26 @@ export class CampaignsService {
       .leftJoinAndSelect('campaign.contentPieces', 'contentPieces')
       .where('campaign.name ILIKE :searchTerm', { searchTerm: `%${searchTerm}%` })
       .orWhere('campaign.description ILIKE :searchTerm', { searchTerm: `%${searchTerm}%` })
+      .orWhere(':searchTerm = ANY(campaign.target_markets)', { searchTerm })
+      .orWhere(':searchTerm = ANY(campaign.tags)', { searchTerm })
+      .orderBy('campaign.updatedAt', 'DESC')
+      .getMany();
+  }
+
+  async findByMarkets(markets: string[]): Promise<Campaign[]> {
+    return await this.campaignsRepository
+      .createQueryBuilder('campaign')
+      .leftJoinAndSelect('campaign.contentPieces', 'contentPieces')
+      .where('campaign.target_markets && :markets', { markets })
+      .orderBy('campaign.updatedAt', 'DESC')
+      .getMany();
+  }
+
+  async findByTags(tags: string[]): Promise<Campaign[]> {
+    return await this.campaignsRepository
+      .createQueryBuilder('campaign')
+      .leftJoinAndSelect('campaign.contentPieces', 'contentPieces')
+      .where('campaign.tags && :tags', { tags })
       .orderBy('campaign.updatedAt', 'DESC')
       .getMany();
   }
@@ -139,7 +158,7 @@ export class CampaignsService {
     if (allDrafts.length === 0) return 0;
 
     const totalResponseTime = allDrafts.reduce(
-      (sum, draft) => sum + (draft.responseTime || 0),
+      (sum, draft) => sum + (draft.responseTimeMs || 0),
       0,
     );
     return totalResponseTime / allDrafts.length;
@@ -149,8 +168,7 @@ export class CampaignsService {
     if (contentPieces.length === 0) return 0;
 
     const completedPieces = contentPieces.filter(
-      piece => piece.reviewState === ReviewState.APPROVED || 
-               piece.reviewState === ReviewState.PUBLISHED
+      piece => piece.reviewState === ReviewState.APPROVED
     );
     
     return (completedPieces.length / contentPieces.length) * 100;

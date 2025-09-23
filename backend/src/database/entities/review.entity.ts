@@ -8,7 +8,6 @@ import {
   Index,
 } from 'typeorm';
 import { ContentPiece, ReviewState } from './content-piece.entity';
-import { Campaign } from './campaign.entity';
 
 export enum ReviewType {
   CONTENT_REVIEW = 'content_review',
@@ -20,9 +19,7 @@ export enum ReviewType {
 export enum ReviewAction {
   APPROVE = 'approve',
   REJECT = 'reject',
-  REQUEST_REVISION = 'request_revision',
   EDIT = 'edit',
-  ESCALATE = 'escalate',
 }
 
 @Entity('reviews')
@@ -33,11 +30,8 @@ export class Review {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'content_piece_id', nullable: true })
+  @Column({ name: 'content_piece_id' })
   contentPieceId: string;
-
-  @Column({ name: 'campaign_id', nullable: true })
-  campaignId: string;
 
   @Column({
     name: 'review_type',
@@ -99,9 +93,4 @@ export class Review {
   @JoinColumn({ name: 'content_piece_id' })
   contentPiece: ContentPiece;
 
-  @ManyToOne(() => Campaign, (campaign) => campaign.reviews, {
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'campaign_id' })
-  campaign: Campaign;
 }

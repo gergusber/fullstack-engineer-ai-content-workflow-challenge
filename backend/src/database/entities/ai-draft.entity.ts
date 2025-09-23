@@ -27,6 +27,12 @@ export enum GenerationType {
   SUMMARY = 'summary',
 }
 
+export enum DraftStatus {
+  CANDIDATE = 'candidate',
+  SELECTED = 'selected',
+  DISCARDED = 'discarded',
+}
+
 @Entity('ai_drafts')
 @Index(['contentPieceId', 'createdAt'])
 @Index(['modelUsed', 'generationType'])
@@ -57,14 +63,21 @@ export class AIDraft {
   })
   generationType: GenerationType;
 
-  @Column({ name: 'generated_title', type: 'text', nullable: true })
-  generatedTitle: string;
-
-  @Column({ name: 'generated_desc', type: 'text', nullable: true })
-  generatedDesc: string;
-
   @Column({ name: 'generated_content', type: 'jsonb', nullable: true })
-  generatedContent: Record<string, any>;
+  generatedContent: {
+    title?: string;
+    description?: string;
+    body?: string;
+    [key: string]: any;
+  };
+
+  @Column({
+    type: 'enum',
+    enum: DraftStatus,
+    enumName: 'draft_status_enum',
+    default: DraftStatus.CANDIDATE,
+  })
+  status: DraftStatus;
 
   @Column({ type: 'text' })
   prompt: string;
@@ -75,14 +88,14 @@ export class AIDraft {
   @Column({ name: 'max_tokens', nullable: true })
   maxTokens: number;
 
-  @Column({ name: 'response_time', nullable: true })
-  responseTime: number;
+  @Column({ name: 'response_time_ms', nullable: true })
+  responseTimeMs: number;
 
   @Column({ name: 'token_count', nullable: true })
   tokenCount: number;
 
-  @Column({ type: 'float', nullable: true })
-  cost: number;
+  @Column({ name: 'cost_usd', type: 'decimal', precision: 10, scale: 6, nullable: true })
+  costUsd: number;
 
   @Column({ name: 'quality_score', type: 'float', nullable: true })
   qualityScore: number;

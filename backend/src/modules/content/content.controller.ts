@@ -19,6 +19,9 @@ import {
   import { CreateContentPieceDto } from './dto/create-content-piece.dto';
   import { UpdateContentPieceDto } from './dto/update-content-piece.dto';
   import { UpdateReviewStateDto } from './dto/update-review-state.dto';
+  import { SubmitForReviewDto } from './dto/submit-for-review.dto';
+  import { ApproveContentDto } from './dto/approve-content.dto';
+  import { RejectContentDto } from './dto/reject-content.dto';
 //   import { GenerateAIContentDto } from './dto/generate-ai-content.dto';
 //   import { TranslateContentDto } from './dto/translate-content.dto';
   import { ContentPiece, ReviewState, ContentType } from '../../database/entities/content-piece.entity';
@@ -350,9 +353,10 @@ import {
     }
   
     @Post(':id/submit-for-review')
+    @UsePipes(new ValidationPipe({ transform: true }))
     async submitForReview(
       @Param('id', ParseUUIDPipe) id: string,
-      @Body() submitDto: { reviewerIds?: string[]; priority?: string; comments?: string },
+      @Body() submitDto: SubmitForReviewDto,
     ) {
       try {
         const content = await this.contentService.updateReviewState(id, {
@@ -382,18 +386,14 @@ import {
     }
   
     @Post(':id/approve')
+    @UsePipes(new ValidationPipe({ transform: true }))
     async approveContent(
       @Param('id', ParseUUIDPipe) id: string,
-      @Body() approveDto: { 
-        reviewerId: string; 
-        reviewerName: string; 
-        comments?: string;
-        publishImmediately?: boolean;
-      },
+      @Body() approveDto: ApproveContentDto,
     ) {
       try {
         const newState = approveDto.publishImmediately 
-          ? ReviewState.PUBLISHED 
+          ? ReviewState.APPROVED 
           : ReviewState.APPROVED;
   
         const content = await this.contentService.updateReviewState(id, {
@@ -422,14 +422,10 @@ import {
     }
   
     @Post(':id/reject')
+    @UsePipes(new ValidationPipe({ transform: true }))
     async rejectContent(
       @Param('id', ParseUUIDPipe) id: string,
-      @Body() rejectDto: { 
-        reviewerId: string; 
-        reviewerName: string; 
-        reason: string;
-        suggestions?: string;
-      },
+      @Body() rejectDto: RejectContentDto,
     ) {
       try {
         const content = await this.contentService.updateReviewState(id, {

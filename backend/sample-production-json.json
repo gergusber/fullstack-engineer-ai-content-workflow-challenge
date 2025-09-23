@@ -1,0 +1,196 @@
+{
+  "id": "5ea05965-827b-48f1-91a9-8fc9247eaa4a",
+  "name": "Q4 2024 Holiday Campaign",
+  "description": "Holiday season marketing materials for Black Friday and Christmas",
+  "status": "active",
+  "targetMarkets": ["US", "CA", "GB"],
+  "tags": ["holiday", "e-commerce", "seasonal", "black-friday"],
+  "createdBy": "seed-admin",
+  "createdAt": "2024-11-22T20:15:26.788Z",
+  "updatedAt": "2024-11-22T20:15:26.788Z",
+  "contentPieces": [
+    {
+      "id": "658c0c3b-b76e-4f79-9eb2-109bdcaa0751",
+      "campaignId": "5ea05965-827b-48f1-91a9-8fc9247eaa4a",
+      "title": "Black Friday Super Sale - Up to 70% Off!",
+      "description": "Limited time offer on all electronics and gadgets",
+      "contentType": "headline",
+      "sourceLanguage": "en",
+      "targetLanguage": "en",
+      "reviewState": "ai_suggested",
+      "priority": "high",
+      "originalPrompt": "Create a compelling Black Friday headline that emphasizes urgency and savings",
+      "contentMetadata": {
+        "tone": "urgent",
+        "sentiment": "positive",
+        "keywords": ["black friday", "sale", "discount", "electronics"],
+        "targetAudience": "bargain shoppers"
+      },
+      "finalText": null,
+      "translationOf": null,
+      "versionHistory": null,
+      "createdAt": "2024-11-22T20:15:26.832Z",
+      "updatedAt": "2024-11-22T20:15:26.832Z",
+      "publishedAt": null,
+      "aiDrafts": [
+        {
+          "id": "12da1404-3962-41e9-a922-48e83d997943",
+          "contentPieceId": "658c0c3b-b76e-4f79-9eb2-109bdcaa0751",
+          "modelUsed": "claude_3_sonnet",
+          "modelVersion": "claude-3-5-sonnet-20241022",
+          "generationType": "original",
+          "generatedContent": {
+            "title": "Black Friday Mega Sale - Save Up To 70% on Electronics!",
+            "description": "Don't miss out on the biggest sale of the year! Get incredible discounts on laptops, smartphones, headphones, and more. Limited time offer - shop now before it's too late!"
+          },
+          "status": "selected",
+          "prompt": "Create a compelling Black Friday headline that emphasizes urgency and savings",
+          "temperature": 0.7,
+          "maxTokens": 100,
+          "responseTimeMs": 1250,
+          "tokenCount": 45,
+          "costUsd": 0.025,
+          "qualityScore": 0.89,
+          "userRating": 4,
+          "createdAt": "2024-11-22T20:15:26.840Z"
+        }
+      ],
+      "reviews": [
+        {
+          "id": "ee9cea61-6ab7-4706-9fcb-e6521a3ff8d9",
+          "contentPieceId": "658c0c3b-b76e-4f79-9eb2-109bdcaa0751",
+          "reviewType": "content_review",
+          "action": "approve",
+          "previousState": "ai_suggested",
+          "newState": "reviewed",
+          "comments": "Strong copy, urgency well conveyed.",
+          "suggestions": null,
+          "editedContent": null,
+          "reviewerId": "reviewer-1",
+          "reviewerName": "Sarah Johnson",
+          "reviewerRole": "Marketing Manager",
+          "createdAt": "2024-11-22T20:15:26.856Z"
+        }
+      ]
+    },
+    {
+      "id": "a6ec0725-1705-4f5e-8eab-f02ecbe9c58e",
+      "campaignId": "5ea05965-827b-48f1-91a9-8fc9247eaa4a",
+      "title": "Holiday Gift Guide Email Subject",
+      "description": "Subject line for holiday gift guide email campaign",
+      "contentType": "email_subject",
+      "sourceLanguage": "en",
+      "targetLanguage": "en",
+      "reviewState": "reviewed",
+      "priority": "medium",
+      "originalPrompt": "Create an engaging email subject line for holiday gift guide",
+      "contentMetadata": {
+        "tone": "friendly",
+        "sentiment": "positive",
+        "keywords": ["holiday", "gifts", "guide"],
+        "targetAudience": "holiday shoppers"
+      },
+      "finalText": "🎁 Perfect Holiday Gifts for Everyone on Your List",
+      "translationOf": null,
+      "versionHistory": [
+        {
+          "version": 1,
+          "text": "Holiday Gift Guide - Find Perfect Gifts",
+          "editedBy": "ai-system",
+          "editedAt": "2024-11-20T00:00:00.000Z",
+          "changeReason": "Initial AI generation"
+        },
+        {
+          "version": 2,
+          "text": "🎁 Perfect Holiday Gifts for Everyone on Your List",
+          "editedBy": "sarah.johnson",
+          "editedAt": "2024-11-21T00:00:00.000Z",
+          "changeReason": "Added emoji and improved wording for better engagement"
+        }
+      ],
+      "createdAt": "2024-11-22T20:15:26.845Z",
+      "updatedAt": "2024-11-22T20:15:26.845Z",
+      "publishedAt": null,
+      "aiDrafts": [
+        {
+          "id": "f8b2c847-9123-4def-8456-789012345678",
+          "contentPieceId": "a6ec0725-1705-4f5e-8eab-f02ecbe9c58e",
+          "modelUsed": "openai_gpt4",
+          "modelVersion": "gpt-4",
+          "generationType": "original",
+          "generatedContent": {
+            "title": "🎁 Perfect Holiday Gifts for Everyone on Your List",
+            "description": "Discover thoughtfully curated gift ideas for every personality and budget in our comprehensive holiday guide."
+          },
+          "status": "selected",
+          "prompt": "Create an engaging email subject line for holiday gift guide",
+          "temperature": 0.6,
+          "maxTokens": 50,
+          "responseTimeMs": 980,
+          "tokenCount": 28,
+          "costUsd": 0.018,
+          "qualityScore": 0.92,
+          "userRating": 5,
+          "createdAt": "2024-11-22T20:15:26.848Z"
+        }
+      ],
+      "reviews": [
+        {
+          "id": "b3f4d567-8901-4abc-9def-012345678901",
+          "contentPieceId": "a6ec0725-1705-4f5e-8eab-f02ecbe9c58e",
+          "reviewType": "content_review",
+          "action": "approve",
+          "previousState": "ai_suggested",
+          "newState": "reviewed",
+          "comments": "Great subject line! The emoji adds visual appeal and the copy is engaging.",
+          "suggestions": null,
+          "editedContent": null,
+          "reviewerId": "reviewer-1",
+          "reviewerName": "Sarah Johnson",
+          "reviewerRole": "Marketing Manager",
+          "createdAt": "2024-11-22T20:15:26.852Z"
+        }
+      ]
+    },
+    {
+      "id": "c9e8d7f6-5432-4321-8765-987654321012",
+      "campaignId": "5ea05965-827b-48f1-91a9-8fc9247eaa4a",
+      "title": "Guía de Regalos Navideños - Email Subject",
+      "description": "Línea de asunto en español para el email de la guía de regalos navideños",
+      "contentType": "email_subject",
+      "sourceLanguage": "en",
+      "targetLanguage": "es",
+      "reviewState": "approved",
+      "priority": "medium",
+      "originalPrompt": "Traduce al español: Create an engaging email subject line for holiday gift guide",
+      "contentMetadata": {
+        "translationQuality": "professional",
+        "localizedFor": "ES",
+        "culturalAdaptations": ["emoji usage", "tone adaptation"]
+      },
+      "finalText": "🎁 Regalos Navideños Perfectos para Todos en Tu Lista",
+      "translationOf": "a6ec0725-1705-4f5e-8eab-f02ecbe9c58e",
+      "versionHistory": [
+        {
+          "version": 1,
+          "text": "Guía de Regalos Navideños - Encuentra Regalos Perfectos",
+          "editedBy": "translation-ai",
+          "editedAt": "2024-11-22T00:00:00.000Z",
+          "changeReason": "Initial AI translation"
+        },
+        {
+          "version": 2,
+          "text": "🎁 Regalos Navideños Perfectos para Todos en Tu Lista",
+          "editedBy": "maria.garcia",
+          "editedAt": "2024-11-22T00:00:00.000Z",
+          "changeReason": "Added emoji and improved Spanish phrasing for Latin American market"
+        }
+      ],
+      "createdAt": "2024-11-22T20:15:26.865Z",
+      "updatedAt": "2024-11-22T20:15:26.865Z",
+      "publishedAt": null,
+      "aiDrafts": [],
+      "reviews": []
+    }
+  ]
+}
