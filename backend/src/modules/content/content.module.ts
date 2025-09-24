@@ -8,7 +8,7 @@ import { Review } from '../../database/entities/review.entity';
 import { Translation } from '../../database/entities/translation.entity';
 import { ContentVersion } from '../../database/entities/content-version.entity';
 import { ContentAnalytics } from '../../database/entities/content-analytics.entity';
-// import { AIModule } from '../ai/ai.module'; // Import AI module
+import { AIModule } from '../ai/ai.module'; // Import AI module
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { ContentAnalytics } from '../../database/entities/content-analytics.enti
       ContentVersion,
       ContentAnalytics,
     ]),
-    // AIModule,
+    AIModule,
   ],
   controllers: [ContentController],
   providers: [ContentService],

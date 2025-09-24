@@ -14,24 +14,27 @@ import {
     UsePipes,
     ParseUUIDPipe,
   } from '@nestjs/common';
+  import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
   import { ContentService } from './content.service'
-//   import { AIService } from '../ai/ai.service';
+  import { AIService } from '../ai/ai.service';
   import { CreateContentPieceDto } from './dto/create-content-piece.dto';
   import { UpdateContentPieceDto } from './dto/update-content-piece.dto';
   import { UpdateReviewStateDto } from './dto/update-review-state.dto';
   import { SubmitForReviewDto } from './dto/submit-for-review.dto';
   import { ApproveContentDto } from './dto/approve-content.dto';
   import { RejectContentDto } from './dto/reject-content.dto';
-//   import { GenerateAIContentDto } from './dto/generate-ai-content.dto';
-//   import { TranslateContentDto } from './dto/translate-content.dto';
+  import { GenerateAIContentDto } from './dto/generate-ai-content.dto';
+  import { TranslateContentDto } from './dto/translate-content.dto';
   import { ContentPiece, ReviewState, ContentType } from '../../database/entities/content-piece.entity';
   import { AIDraft } from '../../database/entities/ai-draft.entity';
+import { ReviewAction, ReviewType } from 'src/database/entities';
   
+  @ApiTags('Content')
   @Controller('api/content')
   export class ContentController {
     constructor(
       private readonly contentService: ContentService,
-    //   private readonly aiService: AIService,
+      private readonly aiService: AIService,
     ) {}
   
     // ================================
@@ -243,41 +246,143 @@ import {
     //   }
     // }
   
-    // @Post(':id/translate')
-    // @UsePipes(new ValidationPipe({ transform: true }))
-    // async translateContent(
-    //   @Param('id', ParseUUIDPipe) id: string,
-    //   @Body() translateDto: TranslateContentDto,
-    // ) {
-    //   try {
-    //     const content = await this.contentService.findOne(id);
-  
-    //     const translation = await this.aiService.translateContent(
-    //       content,
-    //       translateDto,
-    //     );
-  
-    //     return {
-    //       success: true,
-    //       data: {
-    //         originalContent: content,
-    //         translation,
-    //         translationMetadata: {
-    //           sourceLanguage: translateDto.sourceLanguage,
-    //           targetLanguage: translateDto.targetLanguage,
-    //           model: translateDto.model || 'claude',
-    //           translatedAt: new Date(),
-    //         },
-    //       },
-    //       message: `Content translated to ${translateDto.targetLanguage} successfully`,
-    //     };
-    //   } catch (error) {
-    //     throw new HttpException(
-    //       `Translation failed: ${error.message}`,
-    //       HttpStatus.INTERNAL_SERVER_ERROR,
-    //     );
-    //   }
-    // }
+    @Post(':id/translate')
+    @ApiOperation({
+      summary: 'Translate content using AI',
+      description: 'Translates approved content to a target language using AI translation services (Claude or OpenAI)'
+    })
+    @ApiParam({
+      name: 'id',
+      description: 'UUID of the content piece to translate',
+      example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+    })
+    @ApiBody({
+      type: TranslateContentDto,
+      description: 'Translation configuration'
+    })
+    @ApiResponse({
+      status: 200,
+      description: 'Content translated successfully',
+      example: {
+        success: true,
+        data: {
+          originalContent: {
+            id: 'original-id',
+            title: 'Original Title',
+            reviewState: 'approved'
+          },
+          translatedContent: {
+            id: 'translated-id',
+            title: 'Título Traducido',
+            finalText: 'Contenido traducido...'
+          },
+          translationResult: {
+            qualityScore: 0.92,
+            culturalNotes: 'Adapted formal addressing for Spanish business culture',
+            translationStrategy: 'Localized approach with cultural adaptation and market-specific terminology',
+            confidenceScore: 0.89,
+            aiDraft: {
+              id: 'draft-id',
+              modelUsed: 'claude',
+              generationType: 'translation'
+            }
+          },
+          translationMetadata: {
+            sourceLanguage: 'en',
+            targetLanguage: 'es',
+            model: 'claude',
+            translationType: 'localized'
+          }
+        },
+        message: 'Content translated to es successfully'
+      }
+    })
+    @ApiResponse({
+      status: 400,
+      description: 'Content not approved for translation or invalid request'
+    })
+    @ApiResponse({
+      status: 404,
+      description: 'Content not found'
+    })
+    @ApiResponse({
+      status: 500,
+      description: 'Translation service error'
+    })
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async translateContent(
+      @Param('id', ParseUUIDPipe) id: string,
+      @Body() translateDto: TranslateContentDto,
+    ) {
+      try {
+        // Get the content piece first
+        const content = await this.contentService.findOne(id);
+
+        // Validate content is ready for translation
+        if (content.reviewState !== ReviewState.APPROVED) {
+          throw new HttpException(
+            'Content must be approved before translation',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+
+        // Perform AI translation with retry logic
+        const translationResult = await this.aiService.translateContentWithRetry(
+          content,
+          translateDto,
+          3, // max retries
+        );
+
+        // Create new content piece for translation
+        const translatedContent = await this.contentService.createTranslation(
+          content.id,
+          {
+            campaignId: content.campaignId,
+            contentType: content.contentType,
+            title: translationResult.translatedContent.title,
+            description: translationResult.translatedContent.description,
+            targetLanguage: translateDto.targetLanguage,
+            sourceLanguage: translateDto.sourceLanguage,
+            finalText: translationResult.translatedContent.body,
+            contentMetadata: {
+              translationQuality: translationResult.qualityScore,
+              aiModel: translateDto.model,
+              translationType: translateDto.translationType,
+              culturalNotes: translationResult.translatedContent.culturalNotes,
+              translationStrategy: translationResult.translatedContent.translationStrategy || 'Standard translation',
+              confidenceScore: translationResult.translatedContent.confidenceScore || 0.8,
+              suggestedImprovements: translationResult.translatedContent.suggestedImprovements || 'None',
+            },
+          },
+        );
+
+        return {
+          success: true,
+          data: {
+            originalContent: content,
+            translatedContent,
+            translationResult: {
+              qualityScore: translationResult.qualityScore,
+              aiDraft: translationResult.aiDraft,
+              culturalNotes: translationResult.translatedContent.culturalNotes || 'No cultural notes',
+              translationStrategy: translationResult.translatedContent.translationStrategy || 'Standard translation',
+              confidenceScore: translationResult.translatedContent.confidenceScore || 0.8,
+            },
+            translationMetadata: translationResult.metadata,
+          },
+          message: `Content translated to ${translateDto.targetLanguage} successfully`,
+        };
+      } catch (error) {
+        const status = error instanceof HttpException
+          ? error.getStatus()
+          : HttpStatus.INTERNAL_SERVER_ERROR;
+
+        throw new HttpException(
+          `Translation failed: ${error.message}`,
+          status,
+        );
+      }
+    }
   
     // @Post(':id/improve')
     // @UsePipes(new ValidationPipe({ transform: true }))
@@ -327,7 +432,6 @@ import {
     // ================================
   
     @Patch(':id/review-state')
-    @UsePipes(new ValidationPipe({ transform: true }))
     async updateReviewState(
       @Param('id', ParseUUIDPipe) id: string,
       @Body() updateStateDto: UpdateReviewStateDto,
@@ -353,28 +457,57 @@ import {
     }
   
     @Post(':id/submit-for-review')
-    @UsePipes(new ValidationPipe({ transform: true }))
     async submitForReview(
       @Param('id', ParseUUIDPipe) id: string,
       @Body() submitDto: SubmitForReviewDto,
     ) {
       try {
+        console.log('CHECK============================', id);
+        // Validate that content exists first
+        console.log('submitDto', submitDto);
+
+
+        const existingContent = await this.contentService.findOne(id);
+        if (!existingContent) {
+          throw new HttpException(
+            `Content piece with ID ${id} not found`,
+            HttpStatus.NOT_FOUND,
+          );
+        }
+
         const content = await this.contentService.updateReviewState(id, {
           newState: ReviewState.PENDING_REVIEW,
-          reviewType: 'CONTENT_REVIEW' as any,
-          action: 'REQUEST_REVISION' as any,
+          reviewType: ReviewType.CONTENT_REVIEW,
+          action: ReviewAction.EDIT,
           comments: submitDto.comments || 'Submitted for review',
-          reviewerId: 'system',
+          reviewerId: submitDto.reviewerIds?.[0] || 'system',
           reviewerName: 'System',
           reviewerRole: 'Automated',
         });
-  
+
+        console.log('Content updated successfully:', content.id, content.reviewState);
+
         // TODO: Send notifications to reviewers
         // await this.notificationService.notifyReviewers(submitDto.reviewerIds, content);
-  
+
+        // Return a clean response without circular references
+        const cleanContent = {
+          id: content.id,
+          campaignId: content.campaignId,
+          title: content.title,
+          description: content.description,
+          contentType: content.contentType,
+          reviewState: content.reviewState,
+          priority: content.priority,
+          targetLanguage: content.targetLanguage,
+          sourceLanguage: content.sourceLanguage,
+          createdAt: content.createdAt,
+          updatedAt: content.updatedAt,
+        };
+
         return {
           success: true,
-          data: content,
+          data: cleanContent,
           message: 'Content submitted for review successfully',
         };
       } catch (error) {
@@ -398,8 +531,8 @@ import {
   
         const content = await this.contentService.updateReviewState(id, {
           newState,
-          reviewType: 'FINAL_APPROVAL' as any,
-          action: 'APPROVE' as any,
+          reviewType: ReviewType.FINAL_APPROVAL,
+          action: ReviewAction.APPROVE,
           comments: approveDto.comments || 'Content approved',
           reviewerId: approveDto.reviewerId,
           reviewerName: approveDto.reviewerName,

@@ -1,0 +1,498 @@
+{
+  "info": {
+    "name": "AI Content Workflow - Complete Pipeline",
+    "description": "Complete workflow from campaign creation to AI translation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Campaign Management",
+      "item": [
+        {
+          "name": "Create Campaign",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('campaignId', response.data.id);",
+                  "    console.log('Campaign ID saved:', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Summer 2024 Global Product Launch\",\n  \"description\": \"Comprehensive international campaign for our new summer product line targeting multiple markets\",\n  \"status\": \"draft\",\n  \"targetMarkets\": [\"US\", \"ES\", \"DE\", \"FR\", \"IT\"],\n  \"tags\": [\"product-launch\", \"summer\", \"international\", \"social-media\", \"blog\"],\n  \"createdBy\": \"campaign-manager@company.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "campaigns"]
+            }
+          }
+        },
+        {
+          "name": "Get Campaign",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/campaigns/{{campaignId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "campaigns", "{{campaignId}}"]
+            }
+          }
+        },
+        {
+          "name": "Campaign Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/campaigns/{{campaignId}}/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "campaigns", "{{campaignId}}", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Content Creation",
+      "item": [
+        {
+          "name": "Create Content Piece",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('contentId', response.data.id);",
+                  "    console.log('Content ID saved:', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{campaignId}}\",\n  \"title\": \"Summer Fashion Trends 2024: The Ultimate Guide for Professionals\",\n  \"description\": \"A comprehensive guide showcasing the versatility and elegance of our summer collection, specifically designed for young professionals who want to look stylish while maintaining workplace appropriateness\",\n  \"contentType\": \"blog_post\",\n  \"sourceLanguage\": \"en\",\n  \"targetLanguage\": \"en\",\n  \"priority\": \"high\",\n  \"originalPrompt\": \"Write a comprehensive blog post about summer fashion trends for young professionals, focusing on versatile pieces that work for both work and weekend, emphasizing our new summer collection\",\n  \"contentMetadata\": {\n    \"seoKeywords\": [\"summer fashion\", \"professional attire\", \"workplace style\", \"versatile clothing\", \"summer trends 2024\"],\n    \"targetAudience\": \"young professionals aged 25-35\",\n    \"estimatedWordCount\": 1500,\n    \"industry\": \"fashion\",\n    \"contentGoal\": \"product promotion and brand awareness\"\n  },\n  \"finalText\": \"Summer is here, and with it comes the perfect opportunity to refresh your professional wardrobe with pieces that seamlessly transition from boardroom to happy hour. Our 2024 summer collection embodies the perfect balance of sophistication and comfort, offering young professionals the versatility they crave in today's dynamic work environment.\\n\\nThe key to mastering summer professional style lies in choosing pieces that are both breathable and polished. Lightweight blazers in linen blends provide structure without the bulk, while our signature moisture-wicking dress shirts ensure you stay cool during those intense afternoon meetings. For women, our midi dresses in wrinkle-resistant fabrics offer elegance that travels well from office presentations to client dinners.\\n\\nColor psychology plays a crucial role in professional summer dressing. While traditional navy and black remain staples, this season we're embracing sophisticated shades like sage green, warm terracotta, and classic cream. These colors project confidence while remaining appropriately conservative for professional settings.\",\n  \"createdBy\": \"content-creator@company.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content"]
+            }
+          }
+        },
+        {
+          "name": "Get Content Piece",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Review Workflow",
+      "item": [
+        {
+          "name": "Submit for Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewerIds\": [\"editor@company.com\", \"translation-coordinator@company.com\"],\n  \"priority\": \"high\",\n  \"comments\": \"Please review this content for translation readiness. Focus on international market adaptation and cultural sensitivity. This will be translated to Spanish, German, French, and Italian markets.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/submit-for-review",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "submit-for-review"]
+            }
+          }
+        },
+        {
+          "name": "Update Review State",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newState\": \"reviewed\",\n  \"reviewType\": \"content_review\",\n  \"action\": \"approve\",\n  \"comments\": \"Content is excellent and ready for translation. The language is clear, culturally neutral, and professional. SEO keywords are well-integrated. Approved for all target markets.\",\n  \"suggestions\": \"Consider adding a brief cultural note for the German market regarding formal business attire expectations.\",\n  \"reviewerId\": \"editor@company.com\",\n  \"reviewerName\": \"Sarah Johnson\",\n  \"reviewerRole\": \"Senior Content Editor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/review-state",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "review-state"]
+            }
+          }
+        },
+        {
+          "name": "Approve Content",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewerId\": \"translation-manager@company.com\",\n  \"reviewerName\": \"Maria Garcia\",\n  \"comments\": \"Content approved for international translation. All target markets have been considered. Ready for AI translation to Spanish, German, French, and Italian.\",\n  \"publishImmediately\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject Content (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewerId\": \"editor@company.com\",\n  \"reviewerName\": \"Sarah Johnson\",\n  \"reason\": \"Content needs revision for international markets. Some cultural references may not translate well.\",\n  \"suggestions\": \"Please revise cultural references in paragraphs 3 and 5 to be more universally applicable. Consider removing US-specific terminology.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "reject"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. AI Translation",
+      "item": [
+        {
+          "name": "Translate to Spanish",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('spanishContentId', response.data.translatedContent.id);",
+                  "    console.log('Spanish Content ID saved:', response.data.translatedContent.id);",
+                  "    console.log('Translation Quality Score:', response.data.translationResult.qualityScore);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceLanguage\": \"en\",\n  \"targetLanguage\": \"es\",\n  \"translationType\": \"localized\",\n  \"context\": \"Professional fashion content for Spanish market. Target audience is young professionals aged 25-35. Maintain professional tone while adapting to Spanish business culture. Consider both Spain and Latin American markets.\",\n  \"model\": \"claude\",\n  \"userId\": \"translator@company.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/translate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "translate"]
+            }
+          }
+        },
+        {
+          "name": "Translate to German",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('germanContentId', response.data.translatedContent.id);",
+                  "    console.log('German Content ID saved:', response.data.translatedContent.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceLanguage\": \"en\",\n  \"targetLanguage\": \"de\",\n  \"translationType\": \"culturally_adapted\",\n  \"context\": \"Professional fashion content for German market. German business culture values precision, quality, and conservative professional appearance. Target audience is young professionals who appreciate engineering quality and attention to detail.\",\n  \"model\": \"claude\",\n  \"userId\": \"translator@company.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/translate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "translate"]
+            }
+          }
+        },
+        {
+          "name": "Translate to French",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('frenchContentId', response.data.translatedContent.id);",
+                  "    console.log('French Content ID saved:', response.data.translatedContent.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceLanguage\": \"en\",\n  \"targetLanguage\": \"fr\",\n  \"translationType\": \"localized\",\n  \"context\": \"Professional fashion content for French market. French business culture values elegance, sophistication, and linguistic precision. Maintain professional tone with French business etiquette.\",\n  \"model\": \"claude\",\n  \"userId\": \"translator@company.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/translate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "translate"]
+            }
+          }
+        },
+        {
+          "name": "Translate to Italian",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('italianContentId', response.data.translatedContent.id);",
+                  "    console.log('Italian Content ID saved:', response.data.translatedContent.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceLanguage\": \"en\",\n  \"targetLanguage\": \"it\",\n  \"translationType\": \"culturally_adapted\",\n  \"context\": \"Professional fashion content for Italian market. Italy has strong fashion heritage and sophisticated style expectations. Target audience appreciates quality, craftsmanship, and style innovation.\",\n  \"model\": \"claude\",\n  \"userId\": \"translator@company.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/translate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "translate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Translation Review",
+      "item": [
+        {
+          "name": "Review Spanish Translation",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newState\": \"reviewed\",\n  \"reviewType\": \"translation_review\",\n  \"action\": \"approve\",\n  \"comments\": \"Translation quality is excellent. The Spanish version maintains the professional tone while feeling natural to native speakers. Cultural adaptations are appropriate for both Spain and Latin American markets.\",\n  \"suggestions\": \"Consider adding specific size conversion charts for Spanish market in the final published version.\",\n  \"reviewerId\": \"spanish-editor@company.com\",\n  \"reviewerName\": \"Carlos Rodriguez\",\n  \"reviewerRole\": \"Spanish Translation Editor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{spanishContentId}}/review-state",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{spanishContentId}}", "review-state"]
+            }
+          }
+        },
+        {
+          "name": "Approve Spanish Translation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewerId\": \"spanish-market-manager@company.com\",\n  \"reviewerName\": \"Isabella Martinez\",\n  \"comments\": \"Spanish translation approved for publication. Content is ready for Spanish-speaking markets. Quality score indicates excellent translation. Ready for marketing campaigns.\",\n  \"publishImmediately\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{spanishContentId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{spanishContentId}}", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Review German Translation",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newState\": \"reviewed\",\n  \"reviewType\": \"translation_review\",\n  \"action\": \"approve\",\n  \"comments\": \"German translation demonstrates excellent attention to detail and cultural appropriateness. The formal tone is perfect for German business culture.\",\n  \"reviewerId\": \"german-editor@company.com\",\n  \"reviewerName\": \"Klaus Weber\",\n  \"reviewerRole\": \"German Translation Editor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{germanContentId}}/review-state",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{germanContentId}}", "review-state"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Content Listing & Search",
+      "item": [
+        {
+          "name": "List All Content",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content"]
+            }
+          }
+        },
+        {
+          "name": "Filter by Campaign",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content?campaignId={{campaignId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content"],
+              "query": [
+                {
+                  "key": "campaignId",
+                  "value": "{{campaignId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Review State",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content?reviewState=approved",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content"],
+              "query": [
+                {
+                  "key": "reviewState",
+                  "value": "approved"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Language",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content?language=es",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content"],
+              "query": [
+                {
+                  "key": "language",
+                  "value": "es"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001"
+    }
+  ]
+}

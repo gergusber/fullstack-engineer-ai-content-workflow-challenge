@@ -29,6 +29,7 @@ export enum ReviewAction {
 export class Review {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+  
 
   @Column({ name: 'content_piece_id' })
   contentPieceId: string;

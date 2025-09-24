@@ -114,14 +114,19 @@ export class ContentService {
     id: string,
     updateStateDto: UpdateReviewStateDto
   ): Promise<ContentPiece> {
+    if (!id) {
+      throw new Error('Content piece ID is required');
+    }
+
     const content = await this.findOne(id);
     const previousState = content.reviewState;
 
-    content.reviewState = updateStateDto.newState;
+    console.log('Creating review record for content ID:', content.id);
+    console.log('Content exists:', !!content, 'Content ID type:', typeof content.id);
 
-    // Create review record
-    const review = this.reviewRepository.create({
-      contentPieceId: id,
+    // Ensure we're creating a completely new review record
+    const reviewData = {
+      contentPieceId: content.id,
       reviewType: updateStateDto.reviewType,
       action: updateStateDto.action,
       previousState: previousState,
@@ -131,16 +136,60 @@ export class ContentService {
       reviewerId: updateStateDto.reviewerId,
       reviewerName: updateStateDto.reviewerName,
       reviewerRole: updateStateDto.reviewerRole,
+    };
+
+    console.log('Review data before create:', reviewData);
+
+    // Create new review record (explicitly set both FK and relation)
+    const review = await this.reviewRepository.create({
+      ...reviewData,
+      contentPiece: content,
     });
+
+    console.log('Review object after create:', {
+      id: review.id,
+      contentPieceId: review.contentPieceId,
+      hasId: !!review.id
+    });
+
+    // Double-ensure FK is present before save
+    review.contentPieceId = review.contentPieceId || content.id;
 
     await this.reviewRepository.save(review);
 
-    // Update published date if approved
-    if (updateStateDto.newState === ReviewState.APPROVED) {
-      content.publishedAt = new Date();
-    }
+    // Prepare content updates without touching relations to avoid cascading nulls
+    const contentUpdate: Partial<ContentPiece> = {
+      reviewState: updateStateDto.newState,
+    };
 
-    return await this.contentRepository.save(content);
+    // Update published date and finalText if approved
+    if (updateStateDto.newState === ReviewState.APPROVED) {
+      contentUpdate.publishedAt = new Date();
+
+      // Automatically populate finalText from selected AI draft
+      const selectedDraft = await this.aiDraftRepository.findOne({
+        where: {
+          contentPieceId: id,
+          status: DraftStatus.SELECTED,
+        },
+        order: { createdAt: 'DESC' },
+      });
+
+      if (selectedDraft && selectedDraft.generatedContent) {
+        const { title, description, body } = selectedDraft.generatedContent;
+        let finalText = '';
+        if (title) finalText += `${title}\n\n`;
+        if (description) finalText += `${description}\n\n`;
+        if (body) finalText += body;
+        contentUpdate.finalText = finalText.trim();
+      }
+    }
+    // return await this.contentRepository.save(content);
+    // Perform a lightweight update to avoid relation cascades
+    await this.contentRepository.update(id, contentUpdate);
+
+    // Return the fresh entity
+    return await this.findOne(id);
   }
 
   async remove(id: string): Promise<void> {
