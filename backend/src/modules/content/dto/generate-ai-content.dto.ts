@@ -29,7 +29,6 @@ export class GenerateAIContentDto {
   tone?: 'professional' | 'casual' | 'creative' | 'urgent';
 
   @IsOptional()
-  @IsUUID()
   userId?: string;
 
   @IsOptional()

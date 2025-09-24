@@ -1,8 +1,9 @@
 {
   "info": {
     "name": "AI Content Workflow - Complete Pipeline",
-    "description": "Complete workflow from campaign creation to AI translation",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "description": "## 🚀 AI Content Workflow API Collection\n\nThis comprehensive Postman collection covers the complete content lifecycle from campaign creation to AI-powered translation and approval.\n\n### 🔄 **Complete Workflow**\n1. **Campaign Management** - Create and manage content campaigns\n2. **Content Creation** - Create, update, and manage content pieces\n3. **Review Workflow** - Submit content for review and approval\n4. **AI Translation** - Translate content using AI models with cultural adaptation\n5. **AI Content Generation** - Generate content variations and compare AI models\n6. **Translation Management** - Modern translation approval workflow\n7. **Content Analytics** - Track versions, drafts, and review history\n8. **Advanced Search** - Filter and search content with multiple criteria\n\n### 🎯 **Key Features**\n- **Automated Variable Management** - Auto-populates IDs and data\n- **Comprehensive Test Scripts** - Detailed logging and validation\n- **Realistic Data Examples** - Production-ready request payloads\n- **Error Handling** - Robust error detection and reporting\n- **Performance Monitoring** - Response time and quality metrics\n\n### 🔧 **Quick Start**\n1. Import both collection and environment files\n2. Ensure backend server is running on localhost:3001\n3. Run requests in sequence starting with 'Create Campaign'\n4. Monitor console for detailed execution logs\n\n### 📊 **Success Metrics**\n- Quality scores > 0.8 for AI generations\n- Response times < 2000ms for standard requests\n- Translation approval workflow completion\n- Proper state transitions and data persistence",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.1.0"
   },
   "item": [
     {
@@ -10,6 +11,10 @@
       "item": [
         {
           "name": "Create Campaign",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "description": "## 🚀 Create New Campaign\n\n**Purpose**: Creates a new content campaign that will serve as a container for all related content pieces.\n\n**Key Features**:\n- Auto-generates campaign UUID\n- Sets initial status to 'draft'\n- Supports multiple target markets\n- Includes comprehensive metadata\n\n**Success Criteria**:\n- Returns 201 status code\n- Campaign ID is auto-saved to environment\n- Response includes all campaign details\n\n**Next Steps**: Use the saved campaignId to create content pieces",
           "event": [
             {
               "listen": "test",
@@ -64,6 +69,49 @@
               "path": ["api", "campaigns", "{{campaignId}}", "stats"]
             }
           }
+        },
+        {
+          "name": "Update Campaign",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Summer 2024 Global Product Launch\",\n  \"description\": \"Enhanced comprehensive international campaign for our new summer product line targeting multiple markets with updated strategy\",\n  \"status\": \"active\",\n  \"targetMarkets\": [\"US\", \"ES\", \"DE\", \"FR\", \"IT\", \"JP\"],\n  \"tags\": [\"product-launch\", \"summer\", \"international\", \"social-media\", \"blog\", \"updated\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/campaigns/{{campaignId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "campaigns", "{{campaignId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Campaign",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/campaigns/{{campaignId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "campaigns", "{{campaignId}}"]
+            }
+          }
+        },
+        {
+          "name": "List All Campaigns",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/campaigns",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "campaigns"]
+            }
+          }
         }
       ]
     },
@@ -115,6 +163,38 @@
               "path": ["api", "content", "{{contentId}}"]
             }
           }
+        },
+        {
+          "name": "Update Content Piece",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Summer Fashion Trends 2024: The Complete Guide for Modern Professionals\",\n  \"description\": \"An enhanced comprehensive guide showcasing the versatility and elegance of our summer collection, specifically designed for young professionals who want to look stylish while maintaining workplace appropriateness. Now with sustainability focus.\",\n  \"priority\": \"critical\",\n  \"contentMetadata\": {\n    \"seoKeywords\": [\"summer fashion\", \"professional attire\", \"workplace style\", \"versatile clothing\", \"summer trends 2024\", \"sustainable fashion\"],\n    \"targetAudience\": \"young professionals aged 25-35\",\n    \"estimatedWordCount\": 1800,\n    \"industry\": \"fashion\",\n    \"contentGoal\": \"product promotion, brand awareness, and sustainability messaging\",\n    \"lastUpdated\": \"2024-09-24\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Content Piece",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}"]
+            }
+          }
         }
       ]
     },
@@ -133,7 +213,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reviewerIds\": [\"editor@company.com\", \"translation-coordinator@company.com\"],\n  \"priority\": \"high\",\n  \"comments\": \"Please review this content for translation readiness. Focus on international market adaptation and cultural sensitivity. This will be translated to Spanish, German, French, and Italian markets.\"\n}"
+              "raw": "{\n  \"reviewerIds\": [\"{{reviewerId}}\", \"{{translatorId}}\"],\n  \"priority\": \"high\",\n  \"comments\": \"Please review this content for translation readiness. Focus on international market adaptation and cultural sensitivity. This will be translated to {{targetMarkets}} markets.\",\n  \"requestedBy\": \"{{userId}}\",\n  \"deadline\": \"2024-10-15\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/content/{{contentId}}/submit-for-review",
@@ -154,7 +234,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"newState\": \"reviewed\",\n  \"reviewType\": \"content_review\",\n  \"action\": \"approve\",\n  \"comments\": \"Content is excellent and ready for translation. The language is clear, culturally neutral, and professional. SEO keywords are well-integrated. Approved for all target markets.\",\n  \"suggestions\": \"Consider adding a brief cultural note for the German market regarding formal business attire expectations.\",\n  \"reviewerId\": \"editor@company.com\",\n  \"reviewerName\": \"Sarah Johnson\",\n  \"reviewerRole\": \"Senior Content Editor\"\n}"
+              "raw": "{\n  \"newState\": \"reviewed\",\n  \"reviewType\": \"content_review\",\n  \"action\": \"approve\",\n  \"comments\": \"Content is excellent and ready for translation. The language is clear, culturally neutral, and professional. SEO keywords are well-integrated. Approved for all target markets: {{targetMarkets}}.\",\n  \"suggestions\": \"Consider adding cultural notes for specific markets regarding business attire expectations and local preferences.\",\n  \"reviewerId\": \"{{reviewerId}}\",\n  \"reviewerName\": \"{{userName}}\",\n  \"reviewerRole\": \"{{userRole}}\",\n  \"reviewDate\": \"{{$timestamp}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/content/{{contentId}}/review-state",
@@ -237,7 +317,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sourceLanguage\": \"en\",\n  \"targetLanguage\": \"es\",\n  \"translationType\": \"localized\",\n  \"context\": \"Professional fashion content for Spanish market. Target audience is young professionals aged 25-35. Maintain professional tone while adapting to Spanish business culture. Consider both Spain and Latin American markets.\",\n  \"model\": \"claude\",\n  \"userId\": \"translator@company.com\"\n}"
+              "raw": "{\n  \"sourceLanguage\": \"{{defaultLanguage}}\",\n  \"targetLanguage\": \"es\",\n  \"translationType\": \"localized\",\n  \"context\": \"Professional fashion content for Spanish market. Target audience is young professionals aged 25-35. Maintain professional tone while adapting to Spanish business culture. Consider both Spain and Latin American markets.\",\n  \"model\": \"{{aiModel}}\",\n  \"userId\": \"{{userId}}\",\n  \"priority\": \"high\",\n  \"deadline\": \"2024-10-01\",\n  \"culturalAdaptation\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/content/{{contentId}}/translate",
@@ -350,35 +430,29 @@
               "path": ["api", "content", "{{contentId}}", "translate"]
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "5. Translation Review",
-      "item": [
-        {
-          "name": "Review Spanish Translation",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"newState\": \"reviewed\",\n  \"reviewType\": \"translation_review\",\n  \"action\": \"approve\",\n  \"comments\": \"Translation quality is excellent. The Spanish version maintains the professional tone while feeling natural to native speakers. Cultural adaptations are appropriate for both Spain and Latin American markets.\",\n  \"suggestions\": \"Consider adding specific size conversion charts for Spanish market in the final published version.\",\n  \"reviewerId\": \"spanish-editor@company.com\",\n  \"reviewerName\": \"Carlos Rodriguez\",\n  \"reviewerRole\": \"Spanish Translation Editor\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/content/{{spanishContentId}}/review-state",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "content", "{{spanishContentId}}", "review-state"]
-            }
-          }
         },
         {
-          "name": "Approve Spanish Translation",
+          "name": "Generate AI Content",
+          "description": "## 🤖 Generate AI Content Variations\n\n**Purpose**: Uses AI models to generate content variations, improvements, or completely new content based on existing content pieces.\n\n**Generation Types**:\n- `original`: Create new content from scratch\n- `variation`: Create variation of existing content\n- `improvement`: Enhance and improve existing content\n\n**Supported Models**:\n- `claude`: Anthropic Claude (recommended for creative content)\n- `openai`: OpenAI GPT (good for technical content)\n- `both`: Generate with both models for comparison\n\n**Quality Metrics**:\n- Quality score calculation based on relevance and structure\n- Response time monitoring\n- Cost tracking per generation\n- Token usage analysis\n\n**Success Indicators**:\n- Quality score > 0.8\n- Response time < 3000ms\n- AI draft record created\n- Content state updated to 'ai_suggested'",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.aiDraft) {",
+                  "        pm.environment.set('aiDraftId', response.data.aiDraft.id);",
+                  "        console.log('AI Draft ID saved:', response.data.aiDraft.id);",
+                  "        console.log('Generated content quality score:', response.data.generationMetadata.qualityScore);",
+                  "        console.log('Model used:', response.data.generationMetadata.model);",
+                  "        console.log('Response time:', response.data.generationMetadata.responseTime + 'ms');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -389,19 +463,47 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reviewerId\": \"spanish-market-manager@company.com\",\n  \"reviewerName\": \"Isabella Martinez\",\n  \"comments\": \"Spanish translation approved for publication. Content is ready for Spanish-speaking markets. Quality score indicates excellent translation. Ready for marketing campaigns.\",\n  \"publishImmediately\": true\n}"
+              "raw": "{\n  \"prompt\": \"Create a compelling social media post version of this content that would engage young professionals on LinkedIn. Focus on career development and professional growth themes.\",\n  \"model\": \"claude\",\n  \"type\": \"variation\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 800,\n  \"tone\": \"professional\",\n  \"userId\": \"content-creator@company.com\",\n  \"userName\": \"AI Content Assistant\",\n  \"context\": {\n    \"platform\": \"linkedin\",\n    \"audience\": \"young professionals\",\n    \"goal\": \"engagement and brand awareness\"\n  }\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/content/{{spanishContentId}}/approve",
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/generate-ai-content",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "content", "{{spanishContentId}}", "approve"]
+              "path": ["api", "content", "{{contentId}}", "generate-ai-content"]
             }
           }
         },
         {
-          "name": "Review German Translation",
+          "name": "Compare AI Models",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data) {",
+                  "        console.log('Best model:', response.data.bestModel);",
+                  "        console.log('Total comparison time:', response.data.totalTime + 'ms');",
+                  "        console.log('Recommendations:', JSON.stringify(response.data.recommendations, null, 2));",
+                  "        ",
+                  "        // Log comparison details",
+                  "        const comparison = response.data.comparison;",
+                  "        Object.keys(comparison).forEach(model => {",
+                  "            const result = comparison[model];",
+                  "            if (result.error) {",
+                  "                console.log(`${model}: ERROR - ${result.error}`);",
+                  "            } else {",
+                  "                console.log(`${model}: Quality ${result.qualityScore}, Time ${result.responseTime}ms, Cost $${result.cost}`);",
+                  "            }",
+                  "        });",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
@@ -410,19 +512,249 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"newState\": \"reviewed\",\n  \"reviewType\": \"translation_review\",\n  \"action\": \"approve\",\n  \"comments\": \"German translation demonstrates excellent attention to detail and cultural appropriateness. The formal tone is perfect for German business culture.\",\n  \"reviewerId\": \"german-editor@company.com\",\n  \"reviewerName\": \"Klaus Weber\",\n  \"reviewerRole\": \"German Translation Editor\"\n}"
+              "raw": "{\n  \"prompt\": \"Create an engaging email subject line that would increase open rates for this content. The email will be sent to our professional newsletter subscribers.\",\n  \"models\": [\"claude\", \"openai\"],\n  \"userId\": \"marketing-manager@company.com\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/content/{{germanContentId}}/review-state",
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/compare-ai-models",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "content", "{{germanContentId}}", "review-state"]
+              "path": ["api", "content", "{{contentId}}", "compare-ai-models"]
             }
           }
         }
       ]
     },
     {
-      "name": "6. Content Listing & Search",
+      "name": "6. Translation Management",
+      "item": [
+        {
+          "name": "Get Pending Translations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        // Save the first translation ID for approval/rejection",
+                  "        pm.environment.set('translationId', response.data[0].translation.id);",
+                  "        console.log('Translation ID saved:', response.data[0].translation.id);",
+                  "        console.log('Found', response.data.length, 'pending translations');",
+                  "    } else {",
+                  "        console.log('No pending translations found');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/content/translations/pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "translations", "pending"]
+            }
+          }
+        },
+        {
+          "name": "Approve Spanish Translation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Translation approved successfully');",
+                  "    console.log('Translated content is now:', response.data.translatedContent.reviewState);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewerId\": \"spanish-translator@company.com\",\n  \"reviewerName\": \"Isabella Martinez\",\n  \"comments\": \"Translation quality is excellent. The Spanish version maintains the professional tone while feeling natural to native speakers. Cultural adaptations are appropriate for both Spain and Latin American markets. Ready for publication.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/translations/{{translationId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "translations", "{{translationId}}", "approve"]
+            }
+          }
+        },
+        {
+          "name": "Reject Translation (Alternative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reviewerId\": \"spanish-translator@company.com\",\n  \"reviewerName\": \"Isabella Martinez\",\n  \"reason\": \"Translation needs revision. Some technical terms are not translated consistently. Cultural adaptations need improvement for Latin American markets. Please review paragraphs 2 and 4 for better localization.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/content/translations/{{translationId}}/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "translations", "{{translationId}}", "reject"]
+            }
+          }
+        },
+        {
+          "name": "Get Content Translations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Found', response.data.length, 'translation records for this content');",
+                  "    response.data.forEach((translation, index) => {",
+                  "        console.log(`Translation ${index + 1}: ${translation.sourceLanguage} -> ${translation.targetLanguage}, Quality: ${translation.qualityScore}, Reviewed: ${translation.isHumanReviewed}`);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/translations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "translations"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Content Management & Analytics",
+      "item": [
+        {
+          "name": "Get Content Versions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log(`Found ${response.data.length} content versions`);",
+                  "    response.data.forEach((version, index) => {",
+                  "        console.log(`Version ${index + 1}: ${version.versionNumber} - ${version.changeType} at ${version.createdAt}`);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/versions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "versions"]
+            }
+          }
+        },
+        {
+          "name": "Get AI Drafts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log(`Found ${response.data.length} AI drafts`);",
+                  "    response.data.forEach((draft, index) => {",
+                  "        console.log(`Draft ${index + 1}: ${draft.modelUsed} - Quality: ${draft.qualityScore}, Type: ${draft.generationType}`);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/ai-drafts?model=claude&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "ai-drafts"],
+              "query": [
+                {
+                  "key": "model",
+                  "value": "claude",
+                  "description": "Filter by AI model (optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Limit number of results (1-50)"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Review History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log(`Found ${response.data.reviews.length} review entries`);",
+                  "    response.data.reviews.forEach((review, index) => {",
+                  "        console.log(`Review ${index + 1}: ${review.action} by ${review.reviewerName} - ${review.reviewType}`);",
+                  "    });",
+                  "    console.log('Content Info:', response.data.content.title, '- State:', response.data.content.reviewState);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content/{{contentId}}/review-history",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "{{contentId}}", "review-history"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Content Listing & Search",
       "item": [
         {
           "name": "List All Content",
@@ -481,6 +813,106 @@
                 {
                   "key": "language",
                   "value": "es"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Content Type",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content?contentType=blog_post",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content"],
+              "query": [
+                {
+                  "key": "contentType",
+                  "value": "blog_post",
+                  "description": "Options: blog_post, social_media, email_marketing, product_description"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter by Priority",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content?priority=high",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content"],
+              "query": [
+                {
+                  "key": "priority",
+                  "value": "high",
+                  "description": "Options: low, medium, high, critical"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Advanced Content Search",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log(`Found ${response.data.length} content pieces matching criteria`);",
+                  "    response.data.forEach((content, index) => {",
+                  "        console.log(`${index + 1}. ${content.title} - ${content.reviewState} (${content.contentType})`);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content?campaignId={{campaignId}}&reviewState=approved&language=en&contentType=blog_post&priority=high&limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content"],
+              "query": [
+                {
+                  "key": "campaignId",
+                  "value": "{{campaignId}}",
+                  "description": "Filter by specific campaign"
+                },
+                {
+                  "key": "reviewState",
+                  "value": "approved",
+                  "description": "Options: draft, pending_review, reviewed, approved, rejected, ai_suggested"
+                },
+                {
+                  "key": "language",
+                  "value": "en",
+                  "description": "Target language filter"
+                },
+                {
+                  "key": "contentType",
+                  "value": "blog_post",
+                  "description": "Content type filter"
+                },
+                {
+                  "key": "priority",
+                  "value": "high",
+                  "description": "Priority level filter"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Number of results to return"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Pagination offset"
                 }
               ]
             }

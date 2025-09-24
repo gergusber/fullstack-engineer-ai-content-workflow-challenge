@@ -14,7 +14,7 @@ import {
     UsePipes,
     ParseUUIDPipe,
   } from '@nestjs/common';
-  import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+  import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
   import { ContentService } from './content.service'
   import { AIService } from '../ai/ai.service';
   import { CreateContentPieceDto } from './dto/create-content-piece.dto';
@@ -166,85 +166,206 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
     // AI INTEGRATION ENDPOINTS
     // ================================
   
-    // @Post(':id/generate-ai-content')
-    // @UsePipes(new ValidationPipe({ transform: true }))
-    // async generateAIContent(
-    //   @Param('id', ParseUUIDPipe) id: string,
-    //   @Body() generateDto: GenerateAIContentDto,
-    // ) {
-    //   try {
-    //     // Get the content piece first
-    //     const content = await this.contentService.findOne(id);
+    @Post(':id/generate-ai-content')
+    @ApiOperation({
+      summary: 'Generate AI content for a content piece',
+      description: 'Uses AI models to generate new content variations, improvements, or original content based on the existing content piece'
+    })
+    @ApiParam({
+      name: 'id',
+      description: 'UUID of the content piece to generate AI content for',
+      example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+    })
+    @ApiBody({
+      type: GenerateAIContentDto,
+      description: 'AI content generation parameters'
+    })
+    @ApiResponse({
+      status: 200,
+      description: 'AI content generated successfully',
+      example: {
+        success: true,
+        data: {
+          aiDraft: {
+            id: 'draft-id',
+            generatedContent: {
+              title: 'AI Generated Title',
+              description: 'AI generated description',
+              body: 'AI generated main content...'
+            },
+            qualityScore: 0.85,
+            modelUsed: 'claude'
+          },
+          generationMetadata: {
+            model: 'claude-3-5-sonnet',
+            responseTime: 1250,
+            qualityScore: 0.85,
+            tokenCount: 450
+          }
+        },
+        message: 'AI content generated successfully'
+      }
+    })
+    async generateAIContent(
+      @Param('id', ParseUUIDPipe) id: string,
+      @Body() generateDto: GenerateAIContentDto,
+    ) {
+      try {
+        // Get the content piece first
+        const content = await this.contentService.findOne(id);
+
+        // Generate AI content
+        const result = await this.aiService.generateContentForPiece(
+          content,
+          generateDto,
+        );
+
+        // Update content state to AI_SUGGESTED if it was draft
+        if (content.reviewState === ReviewState.DRAFT) {
+          await this.contentService.updateReviewState(id, {
+            newState: ReviewState.AI_SUGGESTED,
+            reviewType: ReviewType.CONTENT_REVIEW,
+            action: ReviewAction.EDIT,
+            comments: `AI content generated using ${generateDto.model}. ${generateDto.type || 'Original'} generation requested.`,
+            reviewerId: generateDto.userId || 'system',
+            reviewerName: generateDto.userName || 'AI System',
+            reviewerRole: 'AI Assistant',
+          });
+        }
+
+        return {
+          success: true,
+          data: {
+            contentPiece: await this.contentService.findOne(id),
+            aiDraft: result.aiDraft,
+            generatedContent: result.generatedContent,
+            generationMetadata: {
+              model: generateDto.model,
+              prompt: generateDto.prompt,
+              type: generateDto.type || 'original',
+              generatedAt: new Date(),
+              ...result.metadata,
+            },
+          },
+          message: 'AI content generated successfully',
+        };
+      } catch (error) {
+        const status = error instanceof HttpException
+          ? error.getStatus()
+          : HttpStatus.INTERNAL_SERVER_ERROR;
+
+        throw new HttpException(
+          `AI generation failed: ${error.message}`,
+          status,
+        );
+      }
+    }
   
-    //     // Generate AI content
-    //     const aiDraft = await this.aiService.generateContentForPiece(
-    //       content,
-    //       generateDto,
-    //     );
-  
-    //     // Update content state to AI_GENERATED
-    //     await this.contentService.updateReviewState(id, {
-    //       newState: ReviewState.AI_GENERATED,
-    //       reviewType: 'CONTENT_REVIEW' as any,
-    //       action: 'EDIT' as any,
-    //       comments: `AI content generated using ${generateDto.model}`,
-    //       reviewerId: generateDto.userId || 'system',
-    //       reviewerName: generateDto.userName || 'AI System',
-    //       reviewerRole: 'AI Assistant',
-    //     });
-  
-    //     return {
-    //       success: true,
-    //       data: {
-    //         contentPiece: await this.contentService.findOne(id),
-    //         aiDraft,
-    //         generationMetadata: {
-    //           model: generateDto.model,
-    //           prompt: generateDto.prompt,
-    //           generatedAt: new Date(),
-    //         },
-    //       },
-    //       message: 'AI content generated successfully',
-    //     };
-    //   } catch (error) {
-    //     throw new HttpException(
-    //       `AI generation failed: ${error.message}`,
-    //       HttpStatus.INTERNAL_SERVER_ERROR,
-    //     );
-    //   }
-    // }
-  
-    // @Post(':id/compare-ai-models')
-    // @UsePipes(new ValidationPipe({ transform: true }))
-    // async compareAIModels(
-    //   @Param('id', ParseUUIDPipe) id: string,
-    //   @Body() compareDto: { prompt: string; models?: string[]; userId?: string },
-    // ) {
-    //   try {
-    //     const content = await this.contentService.findOne(id);
-  
-    //     const comparison = await this.aiService.compareModelsForContent(
-    //       content,
-    //       compareDto.prompt,
-    //       compareDto.models || ['claude', 'openai'],
-    //     );
-  
-    //     return {
-    //       success: true,
-    //       data: {
-    //         comparison,
-    //         recommendations: this.generateModelRecommendations(comparison),
-    //         contentPiece: content,
-    //       },
-    //       message: 'AI model comparison completed',
-    //     };
-    //   } catch (error) {
-    //     throw new HttpException(
-    //       `Model comparison failed: ${error.message}`,
-    //       HttpStatus.INTERNAL_SERVER_ERROR,
-    //     );
-    //   }
-    // }
+    @Post(':id/compare-ai-models')
+    @ApiOperation({
+      summary: 'Compare AI models for content generation',
+      description: 'Generates content using multiple AI models and provides a comparison of results, quality scores, and performance metrics'
+    })
+    @ApiParam({
+      name: 'id',
+      description: 'UUID of the content piece to use as context for model comparison',
+      example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+    })
+    @ApiBody({
+      description: 'Model comparison parameters',
+      schema: {
+        type: 'object',
+        required: ['prompt'],
+        properties: {
+          prompt: {
+            type: 'string',
+            description: 'The prompt to use for content generation comparison',
+            example: 'Create a compelling social media post about this content'
+          },
+          models: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'List of AI models to compare',
+            example: ['claude', 'openai'],
+            default: ['claude', 'openai']
+          },
+          userId: {
+            type: 'string',
+            description: 'ID of the user requesting the comparison',
+            example: 'user@company.com'
+          }
+        }
+      }
+    })
+    @ApiResponse({
+      status: 200,
+      description: 'AI model comparison completed successfully',
+      example: {
+        success: true,
+        data: {
+          comparison: {
+            claude: {
+              content: 'Claude generated content...',
+              qualityScore: 0.87,
+              responseTime: 1200,
+              tokenCount: 324,
+              cost: 0.0032
+            },
+            openai: {
+              content: 'OpenAI generated content...',
+              qualityScore: 0.82,
+              responseTime: 980,
+              tokenCount: 298,
+              cost: 0.0045
+            }
+          },
+          bestModel: 'claude',
+          recommendations: [
+            {
+              type: 'quality',
+              message: 'Claude produced higher quality content',
+              advantage: 'claude'
+            }
+          ]
+        }
+      }
+    })
+    async compareAIModels(
+      @Param('id', ParseUUIDPipe) id: string,
+      @Body() compareDto: { prompt: string; models?: string[]; userId?: string },
+    ) {
+      try {
+        const content = await this.contentService.findOne(id);
+
+        const comparison = await this.aiService.compareModelsForContent(
+          content,
+          compareDto.prompt,
+          compareDto.models || ['claude', 'openai'],
+        );
+
+        return {
+          success: true,
+          data: {
+            comparison: comparison.comparison,
+            bestModel: comparison.bestModel,
+            recommendations: this.generateModelRecommendations(comparison.comparison),
+            contentPiece: content,
+            totalTime: comparison.totalTime,
+            metadata: comparison.metadata,
+          },
+          message: 'AI model comparison completed',
+        };
+      } catch (error) {
+        const status = error instanceof HttpException
+          ? error.getStatus()
+          : HttpStatus.INTERNAL_SERVER_ERROR;
+
+        throw new HttpException(
+          `Model comparison failed: ${error.message}`,
+          status,
+        );
+      }
+    }
   
     @Post(':id/translate')
     @ApiOperation({
@@ -344,6 +465,7 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
             targetLanguage: translateDto.targetLanguage,
             sourceLanguage: translateDto.sourceLanguage,
             finalText: translationResult.translatedContent.body,
+            // reviewState: ReviewState.PENDING_REVIEW, // Set to pending review for translation approval
             contentMetadata: {
               translationQuality: translationResult.qualityScore,
               aiModel: translateDto.model,
@@ -354,6 +476,7 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
               suggestedImprovements: translationResult.translatedContent.suggestedImprovements || 'None',
             },
           },
+          translationResult, // Pass translation result to create translation record
         );
 
         return {
@@ -426,7 +549,310 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
     //     );
     //   }
     // }
-  
+
+    // ================================
+    // TRANSLATION ENDPOINTS
+    // ================================
+
+    @Get('translations/pending')
+    @ApiOperation({
+      summary: 'Get pending translations for review',
+      description: 'Returns all translations that are pending human review'
+    })
+    @ApiResponse({
+      status: 200,
+      description: 'Pending translations retrieved successfully',
+    })
+    async getPendingTranslations() {
+      try {
+        const pendingTranslations = await this.contentService.getPendingTranslations();
+
+        return {
+          success: true,
+          data: pendingTranslations,
+          message: `Found ${pendingTranslations.length} pending translations`,
+        };
+      } catch (error) {
+        throw new HttpException(
+          `Failed to get pending translations: ${error.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+
+    @Post('translations/:translationId/approve')
+    @ApiOperation({
+      summary: 'Approve a translation',
+      description: 'Approve a specific translation and set the translated content as approved'
+    })
+    @ApiParam({
+      name: 'translationId',
+      description: 'UUID of the translation to approve',
+    })
+    async approveTranslation(
+      @Param('translationId', ParseUUIDPipe) translationId: string,
+      @Body() approveDto: { reviewerId: string; reviewerName: string; comments?: string },
+    ) {
+      try {
+        const result = await this.contentService.approveTranslation(
+          translationId,
+          approveDto.reviewerId,
+          approveDto.reviewerName,
+          approveDto.comments,
+        );
+
+        return {
+          success: true,
+          data: result,
+          message: 'Translation approved successfully',
+        };
+      } catch (error) {
+        const status = error instanceof HttpException
+          ? error.getStatus()
+          : HttpStatus.INTERNAL_SERVER_ERROR;
+
+        throw new HttpException(
+          `Failed to approve translation: ${error.message}`,
+          status,
+        );
+      }
+    }
+
+    @Post('translations/:translationId/reject')
+    @ApiOperation({
+      summary: 'Reject a translation',
+      description: 'Reject a specific translation with a reason'
+    })
+    @ApiParam({
+      name: 'translationId',
+      description: 'UUID of the translation to reject',
+    })
+    async rejectTranslation(
+      @Param('translationId', ParseUUIDPipe) translationId: string,
+      @Body() rejectDto: { reviewerId: string; reviewerName: string; reason: string },
+    ) {
+      try {
+        const result = await this.contentService.rejectTranslation(
+          translationId,
+          rejectDto.reviewerId,
+          rejectDto.reviewerName,
+          rejectDto.reason,
+        );
+
+        return {
+          success: true,
+          data: result,
+          message: 'Translation rejected',
+        };
+      } catch (error) {
+        const status = error instanceof HttpException
+          ? error.getStatus()
+          : HttpStatus.INTERNAL_SERVER_ERROR;
+
+        throw new HttpException(
+          `Failed to reject translation: ${error.message}`,
+          status,
+        );
+      }
+    }
+
+    @Get('ai-draft-translations/pending')
+    @ApiOperation({
+      summary: 'Get pending AI draft translations',
+      description: 'Returns all AI draft translations that are pending human review. Optionally filter by content ID.'
+    })
+    @ApiQuery({
+      name: 'contentId',
+      required: false,
+      description: 'Filter by specific content piece ID',
+      type: String,
+    })
+    @ApiResponse({
+      status: 200,
+      description: 'Pending AI draft translations retrieved successfully',
+    })
+    async getPendingAIDraftTranslations(@Query('contentId') contentId?: string) {
+      try {
+        const pendingAIDraftTranslations = await this.contentService.getPendingAIDraftTranslations(contentId);
+
+        const message = contentId 
+          ? `Found ${pendingAIDraftTranslations.length} pending AI draft translations for content ${contentId}`
+          : `Found ${pendingAIDraftTranslations.length} pending AI draft translations`;
+
+        return {
+          success: true,
+          data: pendingAIDraftTranslations,
+          message,
+        };
+      } catch (error) {
+        throw new HttpException(
+          `Failed to get pending AI draft translations: ${error.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+
+    @Post('ai-draft-translations/:aiDraftId/approve')
+    @ApiOperation({
+      summary: 'Approve an AI draft translation',
+      description: 'Approve a specific AI draft translation, create translation record, and set the translated content as approved'
+    })
+    @ApiParam({
+      name: 'aiDraftId',
+      description: 'UUID of the AI draft translation to approve',
+    })
+    async approveAIDraftTranslation(
+      @Param('aiDraftId', ParseUUIDPipe) aiDraftId: string,
+      @Body() approveDto: { reviewerId: string; reviewerName: string; comments?: string },
+    ) {
+      try {
+        const result = await this.contentService.approveAIDraftTranslation(
+          aiDraftId,
+          approveDto.reviewerId,
+          approveDto.reviewerName,
+          approveDto.comments,
+        );
+
+        return {
+          success: true,
+          data: result,
+          message: 'AI draft translation approved successfully',
+        };
+      } catch (error) {
+        const status = error instanceof HttpException
+          ? error.getStatus()
+          : HttpStatus.INTERNAL_SERVER_ERROR;
+
+        throw new HttpException(
+          `Failed to approve AI draft translation: ${error.message}`,
+          status,
+        );
+      }
+    }
+
+    @Get(':id/translations')
+    @ApiOperation({
+      summary: 'Get all translations for a content piece',
+      description: 'Returns all translation records for a specific content piece with basic details'
+    })
+    async getContentTranslations(@Param('id', ParseUUIDPipe) id: string) {
+      try {
+        const translations = await this.contentService.findTranslationsByContentPiece(id);
+
+        return {
+          success: true,
+          data: translations,
+          message: `Found ${translations.length} translations`,
+        };
+      } catch (error) {
+        throw new HttpException(
+          `Failed to get translations: ${error.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+
+    @Get(':id/translations/detailed')
+    @ApiOperation({
+      summary: 'Get detailed translation overview for a content piece',
+      description: 'Returns comprehensive translation information including source content, translation records, translated content pieces, and review status'
+    })
+    @ApiParam({
+      name: 'id',
+      description: 'UUID of the source content piece',
+      example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+    })
+    @ApiResponse({
+      status: 200,
+      description: 'Detailed translation overview retrieved successfully',
+      example: {
+        success: true,
+        data: {
+          sourceContent: {
+            id: 'source-content-id',
+            title: 'Original English Content',
+            reviewState: 'approved'
+          },
+          translations: [
+            {
+              translation: {
+                id: 'translation-record-id',
+                sourceLanguage: 'en',
+                targetLanguage: 'es',
+                qualityScore: 0.87,
+                isHumanReviewed: false
+              },
+              translatedContentPiece: {
+                id: 'translated-content-id',
+                title: 'Contenido en Español',
+                reviewState: 'pending_review'
+              },
+              status: 'pending_review',
+              reviewRequired: true
+            }
+          ]
+        }
+      }
+    })
+    async getDetailedTranslations(@Param('id', ParseUUIDPipe) id: string) {
+      try {
+        const translationDetails = await this.contentService.getTranslationsByContentWithDetails(id);
+
+        const summary = {
+          totalTranslations: translationDetails.translations.length,
+          pendingReview: translationDetails.translations.filter(t => t.reviewRequired).length,
+          approved: translationDetails.translations.filter(t => t.status === 'approved').length,
+          languages: [...new Set(translationDetails.translations.map(t => t.translation.targetLanguage))],
+          reviewProgress: {
+            completed: translationDetails.translations.filter(t => t.translation.isHumanReviewed).length,
+            pending: translationDetails.translations.filter(t => !t.translation.isHumanReviewed).length
+          }
+        };
+
+        return {
+          success: true,
+          data: {
+            ...translationDetails,
+            summary
+          },
+          message: `Found ${translationDetails.translations.length} translations for content piece`,
+        };
+      } catch (error) {
+        throw new HttpException(
+          `Failed to get detailed translations: ${error.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+
+    @Get(':id/translations/pending-review')
+    @ApiOperation({
+      summary: 'Get translations pending review for a specific content piece',
+      description: 'Returns only translations that require human review for a specific content piece'
+    })
+    async getContentTranslationsPendingReview(@Param('id', ParseUUIDPipe) id: string) {
+      try {
+        const translationDetails = await this.contentService.getTranslationsByContentWithDetails(id);
+
+        const pendingTranslations = translationDetails.translations.filter(t => t.reviewRequired);
+
+        return {
+          success: true,
+          data: {
+            sourceContent: translationDetails.sourceContent,
+            pendingTranslations,
+            count: pendingTranslations.length
+          },
+          message: `Found ${pendingTranslations.length} translations pending review`,
+        };
+      } catch (error) {
+        throw new HttpException(
+          `Failed to get pending translations: ${error.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+
     // ================================
     // REVIEW WORKFLOW ENDPOINTS
     // ================================
@@ -462,11 +888,6 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
       @Body() submitDto: SubmitForReviewDto,
     ) {
       try {
-        console.log('CHECK============================', id);
-        // Validate that content exists first
-        console.log('submitDto', submitDto);
-
-
         const existingContent = await this.contentService.findOne(id);
         if (!existingContent) {
           throw new HttpException(
@@ -563,8 +984,8 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
       try {
         const content = await this.contentService.updateReviewState(id, {
           newState: ReviewState.REJECTED,
-          reviewType: 'CONTENT_REVIEW' as any,
-          action: 'REJECT' as any,
+          reviewType: ReviewType.CONTENT_REVIEW,
+          action: ReviewAction.REJECT,
           comments: rejectDto.reason,
           suggestions: rejectDto.suggestions,
           reviewerId: rejectDto.reviewerId,
@@ -605,64 +1026,64 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
     //   }
     // }
   
-    // @Get(':id/versions')
-    // async getContentVersions(@Param('id', ParseUUIDPipe) id: string) {
-    //   try {
-    //     const versions = await this.contentService.getContentVersions(id);
-    //     return {
-    //       success: true,
-    //       data: versions,
-    //       message: `Found ${versions.length} versions`,
-    //     };
-    //   } catch (error) {
-    //     throw new HttpException(
-    //       `Failed to get versions: ${error.message}`,
-    //       HttpStatus.INTERNAL_SERVER_ERROR,
-    //     );
-    //   }
-    // }
+    @Get(':id/versions')
+    async getContentVersions(@Param('id', ParseUUIDPipe) id: string) {
+      try {
+        const versions = await this.contentService.getContentVersions(id);
+        return {
+          success: true,
+          data: versions,
+          message: `Found ${versions.length} versions`,
+        };
+      } catch (error) {
+        throw new HttpException(
+          `Failed to get versions: ${error.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
   
-    // @Get(':id/ai-drafts')
-    // async getAIDrafts(
-    //   @Param('id', ParseUUIDPipe) id: string,
-    //   @Query('model') model?: string,
-    //   @Query('limit') limit: number = 10,
-    // ) {
-    //   try {
-    //     const drafts = await this.contentService.getAIDrafts(id, {
-    //       model,
-    //       limit: Math.min(50, Math.max(1, limit)),
-    //     });
+    @Get(':id/ai-drafts')
+    async getAIDrafts(
+      @Param('id', ParseUUIDPipe) id: string,
+      @Query('model') model?: string,
+      @Query('limit') limit: number = 10,
+    ) {
+      try {
+        const drafts = await this.contentService.getAIDrafts(id, {
+          model,
+          limit: Math.min(50, Math.max(1, limit)),
+        });
   
-    //     return {
-    //       success: true,
-    //       data: drafts,
-    //       message: `Found ${drafts.length} AI drafts`,
-    //     };
-    //   } catch (error) {
-    //     throw new HttpException(
-    //       `Failed to get AI drafts: ${error.message}`,
-    //       HttpStatus.INTERNAL_SERVER_ERROR,
-    //     );
-    //   }
-    // }
+        return {
+          success: true,
+          data: drafts,
+          message: `Found ${drafts.length} AI drafts`,
+        };
+      } catch (error) {
+        throw new HttpException(
+          `Failed to get AI drafts: ${error.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
   
-    // @Get(':id/review-history')
-    // async getReviewHistory(@Param('id', ParseUUIDPipe) id: string) {
-    //   try {
-    //     const history = await this.contentService.getReviewHistory(id);
-    //     return {
-    //       success: true,
-    //       data: history,
-    //       message: `Found ${history.length} review entries`,
-    //     };
-    //   } catch (error) {
-    //     throw new HttpException(
-    //       `Failed to get review history: ${error.message}`,
-    //       HttpStatus.INTERNAL_SERVER_ERROR,
-    //     );
-    //   }
-    // }
+    @Get(':id/review-history')
+    async getReviewHistory(@Param('id', ParseUUIDPipe) id: string) {
+      try {
+        const history = await this.contentService.getReviewHistory(id);
+        return {
+          success: true,
+          data: history,
+          message: `Found ${history.reviews.length} review entries`,
+        };
+      } catch (error) {
+        throw new HttpException(
+          `Failed to get review history: ${error.message}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
   
     // ================================
     // BULK OPERATIONS
@@ -757,59 +1178,98 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
     // HELPER METHODS
     // ================================
   
-    // private generateModelRecommendations(comparison: any) {
-    //   const recommendations = [];
-  
-    //   // Response time comparison
-    //   if (comparison.claude?.responseTime < comparison.openai?.responseTime) {
-    //     recommendations.push({
-    //       type: 'performance',
-    //       message: 'Claude responded faster',
-    //       advantage: 'claude',
-    //       metric: 'response_time',
-    //     });
-    //   } else {
-    //     recommendations.push({
-    //       type: 'performance',
-    //       message: 'OpenAI responded faster',
-    //       advantage: 'openai',
-    //       metric: 'response_time',
-    //     });
-    //   }
-  
-    //   // Quality score comparison
-    //   if (comparison.claude?.qualityScore > comparison.openai?.qualityScore) {
-    //     recommendations.push({
-    //       type: 'quality',
-    //       message: 'Claude produced higher quality content',
-    //       advantage: 'claude',
-    //       metric: 'quality_score',
-    //     });
-    //   } else if (comparison.openai?.qualityScore > comparison.claude?.qualityScore) {
-    //     recommendations.push({
-    //       type: 'quality',
-    //       message: 'OpenAI produced higher quality content',
-    //       advantage: 'openai',
-    //       metric: 'quality_score',
-    //     });
-    //   }
-  
-    //   // Content length comparison
-    //   const claudeLength = comparison.claude?.content?.length || 0;
-    //   const openaiLength = comparison.openai?.content?.length || 0;
-      
-    //   if (Math.abs(claudeLength - openaiLength) > 100) {
-    //     recommendations.push({
-    //       type: 'content_length',
-    //       message: claudeLength > openaiLength 
-    //         ? 'Claude provided more detailed content' 
-    //         : 'OpenAI provided more detailed content',
-    //       advantage: claudeLength > openaiLength ? 'claude' : 'openai',
-    //       metric: 'content_length',
-    //     });
-    //   }
-  
-    //   return recommendations;
-    // }
+    private generateModelRecommendations(comparison: any): Array<{
+      type: string;
+      message: string;
+      advantage: string;
+      metric: string;
+    }> {
+      const recommendations = [];
+
+      const models = Object.keys(comparison);
+
+      if (models.length < 2) {
+        return recommendations;
+      }
+
+      // Response time comparison
+      const modelsBySpeed = models.filter(m => comparison[m].responseTime).sort(
+        (a, b) => comparison[a].responseTime - comparison[b].responseTime
+      );
+
+      if (modelsBySpeed.length >= 2) {
+        const fastest = modelsBySpeed[0];
+        const difference = comparison[modelsBySpeed[1]].responseTime - comparison[fastest].responseTime;
+
+        if (difference > 200) { // Only recommend if significant difference
+          recommendations.push({
+            type: 'performance',
+            message: `${fastest} responded ${Math.round(difference)}ms faster`,
+            advantage: fastest,
+            metric: 'response_time',
+          });
+        }
+      }
+
+      // Quality score comparison
+      const modelsByQuality = models.filter(m => comparison[m].qualityScore).sort(
+        (a, b) => comparison[b].qualityScore - comparison[a].qualityScore
+      );
+
+      if (modelsByQuality.length >= 2) {
+        const best = modelsByQuality[0];
+        const qualityDiff = comparison[best].qualityScore - comparison[modelsByQuality[1]].qualityScore;
+
+        if (qualityDiff > 0.05) { // Only recommend if meaningful difference
+          recommendations.push({
+            type: 'quality',
+            message: `${best} produced higher quality content (score: ${comparison[best].qualityScore.toFixed(2)})`,
+            advantage: best,
+            metric: 'quality_score',
+          });
+        }
+      }
+
+      // Content length comparison
+      const contentLengths = models.map(m => ({
+        model: m,
+        length: comparison[m]?.content?.length || 0
+      })).filter(m => m.length > 0);
+
+      if (contentLengths.length >= 2) {
+        const longest = contentLengths.sort((a, b) => b.length - a.length)[0];
+        const shortest = contentLengths[contentLengths.length - 1];
+
+        if (Math.abs(longest.length - shortest.length) > 100) {
+          recommendations.push({
+            type: 'content_length',
+            message: `${longest.model} provided more detailed content (${longest.length} vs ${shortest.length} characters)`,
+            advantage: longest.model,
+            metric: 'content_length',
+          });
+        }
+      }
+
+      // Cost comparison
+      const modelsByCost = models.filter(m => comparison[m].cost).sort(
+        (a, b) => comparison[a].cost - comparison[b].cost
+      );
+
+      if (modelsByCost.length >= 2) {
+        const cheapest = modelsByCost[0];
+        const costDiff = comparison[modelsByCost[1]].cost - comparison[cheapest].cost;
+
+        if (costDiff > 0.001) { // Only recommend if meaningful cost difference
+          recommendations.push({
+            type: 'cost',
+            message: `${cheapest} is more cost-effective ($${comparison[cheapest].cost.toFixed(4)} vs $${comparison[modelsByCost[1]].cost.toFixed(4)})`,
+            advantage: cheapest,
+            metric: 'cost',
+          });
+        }
+      }
+
+      return recommendations;
+    }
   }
   

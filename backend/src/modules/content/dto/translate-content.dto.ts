@@ -46,10 +46,9 @@ export class TranslateContentDto {
 
   @ApiPropertyOptional({
     description: 'ID of the user requesting the translation',
-    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-    format: 'uuid'
+    example: 'user@company.com',
+    type: 'string'
   })
   @IsOptional()
-  @IsUUID()
   userId?: string;
 }

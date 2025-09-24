@@ -6,6 +6,7 @@ import { AIDraft, AIModel, GenerationType } from '../../database/entities/ai-dra
 import { Translation } from '../../database/entities/translation.entity';
 import { ContentPiece, ReviewState } from '../../database/entities/content-piece.entity';
 import { TranslateContentDto } from '../content/dto/translate-content.dto';
+import Anthropic from '@anthropic-ai/sdk';
 
 export interface TranslationResult {
   translatedContent: {
@@ -49,7 +50,6 @@ export class AIService {
     // 2. Build translation prompt
     const prompt = this.buildTranslationPrompt(contentPiece, translateDto);
 
-    // 3. Call AI provider
     let translationResponse;
     const startTime = Date.now();
 
@@ -107,43 +107,36 @@ export class AIService {
   private async callClaudeAPI(prompt: string, options: any): Promise<any> {
     const startTime = Date.now();
 
-    const apiKey =this.configService.get('CLAUDE_API_KEY');
+    const apiKey = this.configService.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
       throw new Error('Anthropic API key not configured');
     }
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-3-sonnet-20240229',
-          max_tokens: options.maxTokens,
-          temperature: options.temperature,
-          messages: [
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-        }),
+      const anthropic = new Anthropic({
+        apiKey: apiKey,
       });
 
-      if (!response.ok) {
-        throw new Error(`Claude API error: ${response.statusText}`);
-      }
+      const msg = await anthropic.messages.create({
+        model: "claude-3-7-sonnet-20250219", // Updated to use a more recent model
+        max_tokens: options.maxTokens || 1024,
+        temperature: options.temperature,
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+      });
 
-      const data = await response.json();
+      // Extract text content from the response
+      const textContent = msg.content.find(block => block.type === 'text');
 
       return {
-        content: data.content[0].text,
+        content: textContent?.text || '',
         responseTime: Date.now() - startTime,
-        tokenCount: data.usage?.output_tokens || 0,
-        model: 'claude-3-sonnet',
+        tokenCount: msg.usage?.output_tokens || 0,
+        model: 'claude-3-5-sonnet',
       };
     } catch (error) {
       throw new Error(`Claude API call failed: ${error.message}`);
@@ -635,6 +628,7 @@ ${targetCulture.considerations.map(c => `- ${c}`).join('\n')}`;
     const aiDraft = this.aiDraftRepository.create({
       contentPieceId: draftData.contentPieceId,
       modelUsed: draftData.modelUsed,
+      modelVersion: draftData.modelVersion,
       generationType: draftData.generationType,
       generatedContent: draftData.generatedContent,
       prompt: draftData.prompt,
@@ -642,9 +636,252 @@ ${targetCulture.considerations.map(c => `- ${c}`).join('\n')}`;
       responseTimeMs: draftData.responseTimeMs,
       costUsd: draftData.costUsd,
       tokenCount: draftData.tokenCount || 0,
+      temperature: draftData.temperature,
+      maxTokens: draftData.maxTokens,
+      userRating: draftData.userRating,
     });
 
     return await this.aiDraftRepository.save(aiDraft);
+  }
+
+  async generateContentForPiece(
+    contentPiece: any,
+    generateDto: any
+  ): Promise<any> {
+    // Build context-aware prompt
+    const prompt = this.buildContentGenerationPrompt(contentPiece, generateDto);
+
+    let response;
+    const startTime = Date.now();
+
+    try {
+      if (generateDto.model === 'claude' || generateDto.model === 'both') {
+        response = await this.callClaudeAPI(prompt, {
+          temperature: generateDto.temperature || 0.7,
+          maxTokens: generateDto.maxTokens || 1000,
+        });
+      } else if (generateDto.model === 'openai') {
+        response = await this.callOpenAIAPI(prompt, {
+          temperature: generateDto.temperature || 0.7,
+          maxTokens: generateDto.maxTokens || 1000,
+        });
+      }
+
+      // Create AI draft record
+      const aiDraft = await this.createContentDraft({
+        contentPieceId: contentPiece.id,
+        modelUsed: generateDto.model === 'both' ? 'claude' : generateDto.model,
+        modelVersion: response.model,
+        generationType: generateDto.type || 'original',
+        generatedContent: this.parseGeneratedContent(response.content),
+        prompt: prompt,
+        qualityScore: this.calculateContentQuality(response.content, contentPiece),
+        responseTimeMs: Date.now() - startTime,
+        costUsd: this.calculateCost(response),
+        tokenCount: response.tokenCount || 0,
+        temperature: generateDto.temperature,
+        maxTokens: generateDto.maxTokens,
+      });
+
+      return {
+        aiDraft,
+        generatedContent: this.parseGeneratedContent(response.content),
+        metadata: {
+          model: response.model,
+          responseTime: Date.now() - startTime,
+          qualityScore: this.calculateContentQuality(response.content, contentPiece),
+          tokenCount: response.tokenCount,
+        },
+      };
+    } catch (error) {
+      throw new Error(`AI content generation failed: ${error.message}`);
+    }
+  }
+
+  async compareModelsForContent(
+    contentPiece: any,
+    prompt: string,
+    models: string[] = ['claude', 'openai']
+  ): Promise<any> {
+    const startTime = Date.now();
+    const results = {};
+
+    for (const model of models) {
+      try {
+        let response;
+        const modelStartTime = Date.now();
+
+        if (model === 'claude') {
+          response = await this.callClaudeAPI(prompt, {
+            temperature: 0.7,
+            maxTokens: 1000,
+          });
+        } else if (model === 'openai') {
+          response = await this.callOpenAIAPI(prompt, {
+            temperature: 0.7,
+            maxTokens: 1000,
+          });
+        }
+
+        const generatedContent = this.parseGeneratedContent(response.content);
+        const qualityScore = this.calculateContentQuality(response.content, contentPiece);
+
+        results[model] = {
+          content: response.content,
+          generatedContent,
+          qualityScore,
+          responseTime: Date.now() - modelStartTime,
+          tokenCount: response.tokenCount || 0,
+          model: response.model,
+          cost: this.calculateCost(response),
+        };
+
+        // Create AI draft for each model
+        await this.createContentDraft({
+          contentPieceId: contentPiece.id,
+          modelUsed: model,
+          modelVersion: response.model,
+          generationType: 'comparison',
+          generatedContent,
+          prompt: prompt,
+          qualityScore,
+          responseTimeMs: Date.now() - modelStartTime,
+          costUsd: this.calculateCost(response),
+          tokenCount: response.tokenCount || 0,
+          temperature: 0.7,
+          maxTokens: 1000,
+        });
+
+      } catch (error) {
+        results[model] = {
+          error: error.message,
+          success: false,
+        };
+      }
+    }
+
+    return {
+      comparison: results,
+      totalTime: Date.now() - startTime,
+      bestModel: this.determineBestModel(results),
+      metadata: {
+        contentPieceId: contentPiece.id,
+        modelsCompared: models,
+        timestamp: new Date(),
+      },
+    };
+  }
+
+  private buildContentGenerationPrompt(contentPiece: any, generateDto: any): string {
+    let prompt = `Generate ${contentPiece.contentType} content based on the following requirements:\n\n`;
+
+    // Add original content context if available
+    if (contentPiece.title) {
+      prompt += `Original Title: ${contentPiece.title}\n`;
+    }
+    if (contentPiece.description) {
+      prompt += `Original Description: ${contentPiece.description}\n`;
+    }
+
+    prompt += `\nContent Type: ${contentPiece.contentType}\n`;
+    prompt += `Target Language: ${contentPiece.targetLanguage}\n`;
+
+    if (generateDto.tone) {
+      prompt += `Tone: ${generateDto.tone}\n`;
+    }
+
+    prompt += `\nGeneration Request: ${generateDto.prompt}\n\n`;
+
+    // Add generation type specific instructions
+    if (generateDto.type === 'variation') {
+      prompt += `Create a variation of the existing content while maintaining the core message.\n`;
+    } else if (generateDto.type === 'improvement') {
+      prompt += `Improve the existing content for better engagement and clarity.\n`;
+    } else {
+      prompt += `Create original content based on the requirements.\n`;
+    }
+
+    prompt += `\nPlease respond with a JSON object containing:
+{
+  "title": "Generated title",
+  "description": "Generated description",
+  "body": "Generated main content"
+}`;
+
+    return prompt;
+  }
+
+  private parseGeneratedContent(content: string): any {
+    try {
+      // Try to parse as JSON first
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+
+      // Fallback: extract title and body manually
+      const lines = content.split('\n').filter(line => line.trim());
+      return {
+        title: lines[0] || 'Generated Content',
+        description: lines[1] || '',
+        body: lines.slice(2).join('\n') || content,
+      };
+    } catch (error) {
+      return {
+        title: 'Generated Content',
+        description: '',
+        body: content,
+      };
+    }
+  }
+
+  private calculateContentQuality(content: string, originalContent: any): number {
+    let score = 0.5; // Base score
+
+    // Length appropriateness
+    if (content.length > 50 && content.length < 2000) score += 0.2;
+
+    // Content structure
+    if (content.includes('\n') || content.includes('.')) score += 0.1;
+
+    // Relevance to original (simple keyword matching)
+    if (originalContent.title) {
+      const originalWords = originalContent.title.toLowerCase().split(' ');
+      const contentWords = content.toLowerCase();
+      const matches = originalWords.filter(word => contentWords.includes(word));
+      score += (matches.length / originalWords.length) * 0.2;
+    }
+
+    return Math.min(1.0, score);
+  }
+
+  private async createContentDraft(draftData: any): Promise<any> {
+    return await this.createTranslationDraft(draftData);
+  }
+
+  private determineBestModel(results: Record<string, {
+    qualityScore?: number;
+    responseTime?: number;
+    tokenCount?: number;
+    error?: any;
+  }>): string {
+    let bestModel = 'claude';
+    let bestScore = 0;
+
+    for (const [model, result] of Object.entries(results)) {
+      if (result.error) continue;
+
+      const score = (result.qualityScore || 0) * 0.5 +
+                   (1 / Math.max(result.responseTime || 1000, 100)) * 0.3 +
+                   (result.tokenCount > 0 ? 0.2 : 0);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestModel = model;
+      }
+    }
+
+    return bestModel;
   }
 
   private calculateCost(response: any): number {

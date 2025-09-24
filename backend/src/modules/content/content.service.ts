@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, SelectQueryBuilder } from "typeorm";
 import {
@@ -7,8 +7,9 @@ import {
   ContentType,
 } from "../../database/entities/content-piece.entity";
 import { AIDraft, DraftStatus } from "../../database/entities/ai-draft.entity";
-import { Review } from "../../database/entities/review.entity";
+import { Review, ReviewAction, ReviewType } from "../../database/entities/review.entity";
 import { ContentVersion } from "../../database/entities/content-version.entity";
+import { Translation } from "../../database/entities/translation.entity";
 import { CreateContentPieceDto } from "./dto/create-content-piece.dto";
 import { UpdateContentPieceDto } from "./dto/update-content-piece.dto";
 import { UpdateReviewStateDto } from "./dto/update-review-state.dto";
@@ -25,7 +26,9 @@ export class ContentService {
     @InjectRepository(Review)
     private reviewRepository: Repository<Review>,
     @InjectRepository(ContentVersion)
-    private contentVersionRepository: Repository<ContentVersion>
+    private contentVersionRepository: Repository<ContentVersion>,
+    @InjectRepository(Translation)
+    private translationRepository: Repository<Translation>
   ) {}
 
   async create(createContentDto: CreateContentPieceDto): Promise<ContentPiece> {
@@ -92,7 +95,6 @@ export class ContentService {
     updateContentDto: UpdateContentPieceDto
   ): Promise<ContentPiece> {
     const content = await this.findOne(id);
-    const previousState = content.reviewState;
 
     Object.assign(content, updateContentDto);
     const updatedContent = await this.contentRepository.save(content);
@@ -697,7 +699,8 @@ export class ContentService {
 
   async createTranslation(
     sourceContentId: string,
-    createDto: CreateContentPieceDto
+    createDto: CreateContentPieceDto,
+    translationResult?: any
   ): Promise<ContentPiece> {
     const sourceContent = await this.findOne(sourceContentId);
 
@@ -707,7 +710,36 @@ export class ContentService {
       sourceLanguage: sourceContent.targetLanguage,
     };
 
-    return await this.create(translationDto);
+    // Create the translated content piece
+    const translatedContent = await this.create(translationDto);
+
+    // Create the translation record if translation result is provided
+    if (translationResult) {
+      const translation = this.translationRepository.create({
+        contentPieceId: translatedContent.id,
+        sourceLanguage: createDto.sourceLanguage,
+        targetLanguage: createDto.targetLanguage,
+        translatedTitle: translationResult.translatedContent?.title,
+        translatedDesc: translationResult.translatedContent?.description,
+        translatedContent: {
+          title: translationResult.translatedContent?.title,
+          description: translationResult.translatedContent?.description,
+          body: translationResult.translatedContent?.body,
+          culturalNotes: translationResult.translatedContent?.culturalNotes,
+          translationStrategy: translationResult.translatedContent?.translationStrategy,
+          confidenceScore: translationResult.translatedContent?.confidenceScore,
+        },
+        modelUsed: translationResult.metadata?.model || 'claude',
+        translationContext: translationResult.metadata?.translationType || 'standard',
+        qualityScore: translationResult.qualityScore,
+        isHumanReviewed: false,
+      });
+
+      await this.translationRepository.save(translation);
+      console.log('Translation record created:', translation.id);
+    }
+
+    return translatedContent;
   }
 
   async findTranslations(contentId: string): Promise<ContentPiece[]> {
@@ -777,6 +809,230 @@ export class ContentService {
     const translations = await this.findTranslations(source.id);
 
     return { source, translations };
+  }
+
+  // Translation methods
+
+  async findTranslationsByContentPiece(contentPieceId: string): Promise<Translation[]> {
+    return await this.translationRepository.find({
+      where: { contentPieceId },
+      relations: ['contentPiece'],
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+  }
+
+  async getTranslationsByContentWithDetails(contentPieceId: string): Promise<{
+    sourceContent: ContentPiece;
+    translations: Array<{
+      translation: Translation;
+      translatedContentPiece: ContentPiece;
+      status: string;
+      reviewRequired: boolean;
+    }>;
+  }> {
+    // Get source content
+    const sourceContent = await this.findOne(contentPieceId);
+
+    // Get all translations for this content piece
+    const translations = await this.translationRepository.find({
+      where: { contentPieceId },
+      order: { createdAt: 'DESC' },
+    });
+
+    // Get the translated content pieces
+    const translationDetails = await Promise.all(
+      translations.map(async (translation) => {
+        try {
+          // Find the translated content piece by matching the translation relationship
+          const translatedContentPieces = await this.contentRepository.find({
+            where: {
+              translationOf: contentPieceId,
+              targetLanguage: translation.targetLanguage
+            },
+            order: { createdAt: 'DESC' }
+          });
+
+          const translatedContentPiece = translatedContentPieces[0]; // Get the most recent
+
+          return {
+            translation,
+            translatedContentPiece: translatedContentPiece || null,
+            status: translatedContentPiece?.reviewState || 'unknown',
+            reviewRequired: !translation.isHumanReviewed &&
+                           translatedContentPiece?.reviewState === ReviewState.PENDING_REVIEW
+          };
+        } catch (error) {
+          console.error(`Error fetching translated content for translation ${translation.id}:`, error);
+          return {
+            translation,
+            translatedContentPiece: null,
+            status: 'error',
+            reviewRequired: !translation.isHumanReviewed
+          };
+        }
+      })
+    );
+
+    return {
+      sourceContent,
+      translations: translationDetails,
+    };
+  }
+
+  async approveTranslation(
+    translationId: string,
+    reviewerId: string,
+    reviewerName: string,
+    comments?: string
+  ): Promise<{ translation: Translation; translatedContent: ContentPiece }> {
+    const translation = await this.translationRepository.findOne({
+      where: { id: translationId },
+    });
+
+    if (!translation) {
+      throw new NotFoundException(`Translation with ID ${translationId} not found`);
+    }
+
+    // Mark translation as human reviewed
+    translation.isHumanReviewed = true;
+    await this.translationRepository.save(translation);
+
+    // Approve the translated content piece
+    const translatedContent = await this.updateReviewState(translation.contentPieceId, {
+      newState: ReviewState.APPROVED,
+      reviewType: ReviewType.TRANSLATION_REVIEW,
+      action: ReviewAction.APPROVE,
+      comments: comments || 'Translation approved',
+      reviewerId,
+      reviewerName,
+      reviewerRole: 'Translation Reviewer',
+    });
+
+    return { translation, translatedContent };
+  }
+
+  async rejectTranslation(
+    translationId: string,
+    reviewerId: string,
+    reviewerName: string,
+    reason: string
+  ): Promise<{ translation: Translation; translatedContent: ContentPiece }> {
+    const translation = await this.translationRepository.findOne({
+      where: { id: translationId },
+    });
+
+    if (!translation) {
+      throw new NotFoundException(`Translation with ID ${translationId} not found`);
+    }
+
+    // Mark translation as human reviewed
+    translation.isHumanReviewed = true;
+    await this.translationRepository.save(translation);
+
+    // Reject the translated content piece
+    const translatedContent = await this.updateReviewState(translation.contentPieceId, {
+      newState: ReviewState.REJECTED,
+      reviewType: ReviewType.TRANSLATION_REVIEW,
+      action: ReviewAction.REJECT,
+      comments: reason,
+      reviewerId,
+      reviewerName,
+      reviewerRole: 'Translation Reviewer',
+    });
+
+    return { translation, translatedContent };
+  }
+
+  async getPendingTranslations(): Promise<Array<{ translation: Translation; contentPiece: ContentPiece }>> {
+    const translationsData = await this.translationRepository
+      .createQueryBuilder('translation')
+      .leftJoinAndSelect('translation.contentPiece', 'contentPiece')
+      .where('translation.isHumanReviewed = :reviewed', { reviewed: false })
+      .andWhere('contentPiece.reviewState = :state', { state: ReviewState.PENDING_REVIEW })
+      .orderBy('translation.createdAt', 'DESC')
+      .getMany();
+
+    return translationsData.map(translation => ({
+      translation,
+      contentPiece: translation.contentPiece,
+    }));
+  }
+
+  async getPendingAIDraftTranslations(contentId?: string): Promise<Array<{ aiDraft: AIDraft; contentPiece: ContentPiece }>> {
+    const queryBuilder = this.aiDraftRepository
+      .createQueryBuilder('aiDraft')
+      .leftJoinAndSelect('aiDraft.contentPiece', 'contentPiece')
+      .where('aiDraft.generationType = :type', { type: 'translation' })
+      .andWhere('aiDraft.status = :status', { status: 'candidate' })
+
+    // Add content ID filter if provided
+    if (contentId) {
+      queryBuilder.andWhere('aiDraft.contentPieceId = :contentId', { contentId });
+    }
+
+    const aiDrafts = await queryBuilder
+      .orderBy('aiDraft.createdAt', 'DESC')
+      .getMany();
+
+    return aiDrafts.map(aiDraft => ({
+      aiDraft,
+      contentPiece: aiDraft.contentPiece,
+    }));
+  }
+
+  async approveAIDraftTranslation(
+    aiDraftId: string,
+    reviewerId: string,
+    reviewerName: string,
+    comments?: string
+  ): Promise<{ translation: Translation; translatedContent: ContentPiece }> {
+    const aiDraft = await this.aiDraftRepository.findOne({
+      where: { id: aiDraftId },
+      relations: ['contentPiece'],
+    });
+
+    if (!aiDraft) {
+      throw new NotFoundException(`AI Draft with ID ${aiDraftId} not found`);
+    }
+
+    if (aiDraft.generationType !== 'translation') {
+      throw new BadRequestException('AI Draft is not a translation');
+    }
+
+    // Create translation record from AI draft
+    const translation = this.translationRepository.create({
+      contentPieceId: aiDraft.contentPieceId,
+      sourceLanguage: aiDraft.contentPiece.sourceLanguage || 'en',
+      targetLanguage: aiDraft.contentPiece.targetLanguage || 'es',
+      translatedTitle: aiDraft.generatedContent?.title,
+      translatedDesc: aiDraft.generatedContent?.description,
+      translatedContent: aiDraft.generatedContent,
+      modelUsed: aiDraft.modelUsed,
+      translationContext: 'ai_generated',
+      qualityScore: aiDraft.qualityScore,
+      isHumanReviewed: true, // Mark as reviewed since it's being approved
+    });
+
+    await this.translationRepository.save(translation);
+
+    // Update AI draft status
+    aiDraft.status = DraftStatus.SELECTED;
+    await this.aiDraftRepository.save(aiDraft);
+
+    // Approve the translated content piece
+    const translatedContent = await this.updateReviewState(aiDraft.contentPieceId, {
+      newState: ReviewState.APPROVED,
+      reviewType: 'TRANSLATION_REVIEW' as any,
+      action: 'APPROVE' as any,
+      comments: comments || 'AI translation approved',
+      reviewerId,
+      reviewerName,
+      reviewerRole: 'Translation Reviewer',
+    });
+
+    return { translation, translatedContent };
   }
 
   // AIDraft methods
