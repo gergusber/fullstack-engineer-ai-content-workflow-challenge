@@ -527,7 +527,7 @@
       "name": "6. Translation Management",
       "item": [
         {
-          "name": "Get Pending Translations",
+          "name": "Get Pending AI Draft Translations ✨ (New Workflow)",
           "event": [
             {
               "listen": "test",
@@ -535,13 +535,80 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
+                  "    console.log('=== PENDING AI DRAFT TRANSLATIONS ===');",
+                  "    console.log('Total pending AI draft translations:', response.data.length);",
+                  "    console.log('');",
                   "    if (response.data && response.data.length > 0) {",
-                  "        // Save the first translation ID for approval/rejection",
-                  "        pm.environment.set('translationId', response.data[0].translation.id);",
-                  "        console.log('Translation ID saved:', response.data[0].translation.id);",
-                  "        console.log('Found', response.data.length, 'pending translations');",
+                  "        // Save the first AI draft ID for approval workflow",
+                  "        pm.environment.set('aiDraftId', response.data[0].aiDraft.id);",
+                  "        console.log('AI Draft ID saved for approval:', response.data[0].aiDraft.id);",
+                  "        console.log('');",
+                  "        response.data.forEach((item, index) => {",
+                  "            const aiDraft = item.aiDraft;",
+                  "            const content = item.contentPiece;",
+                  "            console.log(`AI Draft Translation ${index + 1}:`);",
+                  "            console.log(`  AI Draft ID: ${aiDraft.id}`);",
+                  "            console.log(`  Content: ${content.title}`);",
+                  "            console.log(`  Language: ${content.sourceLanguage} -> ${content.targetLanguage}`);",
+                  "            console.log(`  Model Used: ${aiDraft.modelUsed}`);",
+                  "            console.log(`  Quality Score: ${aiDraft.qualityScore}`);",
+                  "            console.log(`  Generated: ${aiDraft.createdAt}`);",
+                  "            console.log(`  Status: PENDING REVIEW`);",
+                  "            console.log('');",
+                  "        });",
+                  "        console.log('Next Step: Use \"Approve AI Draft Translation\" with saved aiDraftId');",
                   "    } else {",
-                  "        console.log('No pending translations found');",
+                  "        console.log('✅ No AI draft translations pending review.');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "## 🤖 Get Pending AI Draft Translations\n\n**Purpose**: Returns all AI-generated translations that are pending human review. This is the primary endpoint for the modern translation workflow.\n\n**Key Features**:\n- Lists all pending AI draft translations across all content\n- Optionally filter by specific content ID using ?contentId=xxx\n- Auto-saves first AI draft ID for approval workflow\n- Shows translation quality scores and metadata\n\n**Modern Workflow**:\n1. Content gets translated (creates AI draft)\n2. Use this endpoint to see pending AI draft translations\n3. Review and approve/reject using AI draft ID\n4. Approved drafts become proper translation records\n\n**Success Criteria**:\n- Shows pending AI draft translations\n- Auto-saves aiDraftId to environment\n- Displays quality scores and translation details",
+            "url": {
+              "raw": "{{baseUrl}}/api/content/ai-draft-translations/pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "content", "ai-draft-translations", "pending"]
+            }
+          }
+        },
+        {
+          "name": "Get Pending AI Draft Translations by Content",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('=== PENDING AI DRAFT TRANSLATIONS FOR CONTENT ===');",
+                  "    console.log('Content ID:', pm.environment.get('contentId'));",
+                  "    console.log('Pending translations:', response.data.length);",
+                  "    console.log('');",
+                  "    if (response.data && response.data.length > 0) {",
+                  "        // Save the first AI draft ID",
+                  "        pm.environment.set('aiDraftId', response.data[0].aiDraft.id);",
+                  "        console.log('AI Draft ID saved:', response.data[0].aiDraft.id);",
+                  "        response.data.forEach((item, index) => {",
+                  "            const aiDraft = item.aiDraft;",
+                  "            const content = item.contentPiece;",
+                  "            console.log(`Translation ${index + 1}:`);",
+                  "            console.log(`  Target Language: ${content.targetLanguage}`);",
+                  "            console.log(`  Quality Score: ${aiDraft.qualityScore}`);",
+                  "            console.log(`  Model: ${aiDraft.modelUsed}`);",
+                  "            console.log('');",
+                  "        });",
+                  "    } else {",
+                  "        console.log('No pending AI draft translations for this content');",
                   "    }",
                   "}"
                 ]
@@ -557,14 +624,20 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/content/translations/pending",
+              "raw": "{{baseUrl}}/api/content/ai-draft-translations/pending?contentId={{contentId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "content", "translations", "pending"]
+              "path": ["api", "content", "ai-draft-translations", "pending"],
+              "query": [
+                {
+                  "key": "contentId",
+                  "value": "{{contentId}}"
+                }
+              ]
             }
           }
         },
         {
-          "name": "Approve Spanish Translation",
+          "name": "Approve AI Draft Translation ✨ (Modern Workflow)",
           "event": [
             {
               "listen": "test",
@@ -572,8 +645,18 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
-                  "    console.log('Translation approved successfully');",
-                  "    console.log('Translated content is now:', response.data.translatedContent.reviewState);",
+                  "    console.log('=== AI DRAFT TRANSLATION APPROVED ===');",
+                  "    console.log('Translation Record Created:', response.data.translation.id);",
+                  "    console.log('Target Language:', response.data.translation.targetLanguage);",
+                  "    console.log('Quality Score:', response.data.translation.qualityScore);",
+                  "    console.log('Human Reviewed:', response.data.translation.isHumanReviewed);",
+                  "    console.log('Translated Content ID:', response.data.translatedContent.id);",
+                  "    console.log('Content Review State:', response.data.translatedContent.reviewState);",
+                  "    console.log('');",
+                  "    console.log('✅ Translation approved and moved from AI draft to Translation record');",
+                  "    console.log('✅ Content piece review state updated to APPROVED');",
+                  "    // Save translation ID for future reference",
+                  "    pm.environment.set('approvedTranslationId', response.data.translation.id);",
                   "}"
                 ]
               }
@@ -589,33 +672,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reviewerId\": \"spanish-translator@company.com\",\n  \"reviewerName\": \"Isabella Martinez\",\n  \"comments\": \"Translation quality is excellent. The Spanish version maintains the professional tone while feeling natural to native speakers. Cultural adaptations are appropriate for both Spain and Latin American markets. Ready for publication.\"\n}"
+              "raw": "{\n  \"reviewerId\": \"{{userId}}\",\n  \"reviewerName\": \"{{userName}}\",\n  \"comments\": \"Translation approved after quality review. Cultural adaptation and terminology are appropriate for target market.\"\n}"
             },
+            "description": "## ✅ Approve AI Draft Translation\n\n**Purpose**: Converts an AI draft translation into a proper translation record and marks the translated content as approved.\n\n**What This Does**:\n1. Takes an AI draft translation (pending review)\n2. Creates a proper Translation record in the database\n3. Marks the translation as human-reviewed\n4. Updates the translated content review state to APPROVED\n5. Makes the translation available for publication\n\n**Modern Workflow**:\n- This replaces the old direct translation approval\n- Uses AI draft ID instead of translation ID\n- Creates the translation record upon approval\n- Provides proper audit trail\n\n**Success Criteria**:\n- AI draft converted to translation record\n- Content review state updated to APPROVED\n- Human review flags set appropriately\n- Quality scores preserved",
             "url": {
-              "raw": "{{baseUrl}}/api/content/translations/{{translationId}}/approve",
+              "raw": "{{baseUrl}}/api/content/ai-draft-translations/{{aiDraftId}}/approve",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "content", "translations", "{{translationId}}", "approve"]
-            }
-          }
-        },
-        {
-          "name": "Reject Translation (Alternative)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reviewerId\": \"spanish-translator@company.com\",\n  \"reviewerName\": \"Isabella Martinez\",\n  \"reason\": \"Translation needs revision. Some technical terms are not translated consistently. Cultural adaptations need improvement for Latin American markets. Please review paragraphs 2 and 4 for better localization.\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/content/translations/{{translationId}}/reject",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "content", "translations", "{{translationId}}", "reject"]
+              "path": ["api", "content", "ai-draft-translations", "{{aiDraftId}}", "approve"]
             }
           }
         },

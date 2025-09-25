@@ -84,9 +84,9 @@ npm run start:dev
 3. **Submit for Review** → Changes state to `pending_review`
 4. **Update Review State** → Changes state to `reviewed`
 5. **Approve Content** → Changes state to `approved`
-6. **Translate to Spanish** → Creates translation, saves `spanishContentId`
-7. **Get Pending Translations** → Shows translations awaiting approval, saves `translationId`
-8. **Approve Spanish Translation** → Finalizes translation, changes state to `approved`
+6. **Translate to Spanish** → Creates AI draft translation, saves `spanishContentId`
+7. **Get Pending AI Draft Translations** → Shows AI drafts awaiting approval, saves `aiDraftId`
+8. **Approve AI Draft Translation** → Creates translation record, changes state to `approved`
 
 ### 🤖 Optional AI Enhancement Steps:
 - **Generate AI Content** → Create variations/improvements, saves `aiDraftId`
@@ -107,8 +107,8 @@ These are automatically populated during workflow:
 | `germanContentId` | German translation UUID | Translate to German |
 | `frenchContentId` | French translation UUID | Translate to French |
 | `italianContentId` | Italian translation UUID | Translate to Italian |
-| `translationId` | Translation record UUID | Get Pending Translations |
-| `aiDraftId` | AI-generated draft UUID | Generate AI Content |
+| `aiDraftId` | AI-generated draft UUID | Get Pending AI Draft Translations |
+| `approvedTranslationId` | Approved translation UUID | Approve AI Draft Translation |
 
 ## 📊 Success Indicators
 
