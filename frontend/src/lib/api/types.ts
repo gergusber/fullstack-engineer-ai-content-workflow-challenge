@@ -8,13 +8,11 @@ export interface BaseEntity {
 // Campaign types
 export interface Campaign extends BaseEntity {
   name: string
-  description: string
-  status: 'active' | 'paused' | 'completed'
-  targetAudience: string
-  budget?: number
-  startDate: string
-  endDate?: string
-  createdBy: string
+  description?: string
+  status: 'draft' | 'active' | 'paused' | 'completed' | 'archived'
+  targetMarkets?: string[]
+  tags?: string[]
+  createdBy?: string
 }
 
 export interface CampaignStats {
@@ -66,11 +64,11 @@ export interface AIDraft extends BaseEntity {
 // Request/Response types
 export interface CreateCampaignDto {
   name: string
-  description: string
-  targetAudience: string
-  budget?: number
-  startDate: string
-  endDate?: string
+  description?: string
+  status?: 'draft' | 'active' | 'paused' | 'completed' | 'archived'
+  targetMarkets?: string[]
+  tags?: string[]
+  createdBy?: string
 }
 
 export interface CreateContentDto {

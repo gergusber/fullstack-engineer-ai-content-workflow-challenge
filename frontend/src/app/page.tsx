@@ -1,6 +1,6 @@
-import { TranslationReview } from '@/components/translations/TranslationReview'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CampaignDashboard } from '@/components/campaigns/CampaignDashboard'
 import { Badge } from '@/components/ui/badge'
+import { Languages } from 'lucide-react'
 
 export default function Home() {
   return (
@@ -11,11 +11,11 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-blue-600 rounded-lg">
-                {/* <Languages className="h-6 w-6 text-white" /> */}
+                <Languages className="h-6 w-6 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">AI Content Workflow</h1>
-                <p className="text-sm text-gray-600">Translation Management Dashboard</p>
+                <p className="text-sm text-gray-600">Campaign & Content Management Dashboard</p>
               </div>
             </div>
             <Badge variant="secondary" className="bg-green-100 text-green-800">
@@ -26,47 +26,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Hero Section */}
-      <div className="container mx-auto px-6 py-8">
-        <Card className="mb-8 border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-xl mb-2 flex items-center">
-                  {/* <Sparkles className="h-5 w-5 mr-2 text-blue-600" /> */}
-                  Spanish Translation Workflow - FIXED!
-                </CardTitle>
-                <p className="text-gray-700">
-                  The AI draft translation approval system is now working perfectly. This interface allows you to:
-                </p>
-                <ul className="mt-3 space-y-1 text-sm text-gray-600">
-                  <li>• ✅ <strong>Review AI-generated translations</strong> (from ai_drafts table)</li>
-                  <li>• ✅ <strong>Approve translations</strong> (creates records in translations table)</li>
-                  <li>• ✅ <strong>Real-time updates</strong> with TanStack Query</li>
-                  <li>• ✅ <strong>Proper workflow</strong> - no more translation not found errors</li>
-                </ul>
-              </div>
-              <Badge className="bg-green-600 text-white">
-                Working ✨
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-white p-4 rounded-lg border">
-              <h4 className="font-semibold text-sm mb-2 text-green-800">New Workflow:</h4>
-              <div className="text-sm text-gray-700 space-y-1">
-                <p><strong>1.</strong> Content gets translated → Creates AI draft</p>
-                <p><strong>2.</strong> AI draft appears in the list below</p>
-                <p><strong>3.</strong> Human reviewer approves → Moves to translations table</p>
-                <p><strong>4.</strong> Content is ready for publication ✅</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Translation Review Component */}
-        <TranslationReview />
-      </div>
+      {/* Main Content */}
+      <CampaignDashboard />
     </div>
   )
 }
+
+   

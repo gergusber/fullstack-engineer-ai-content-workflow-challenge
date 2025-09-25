@@ -95,7 +95,7 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
       </Card>
 
       {/* Results */}
-      {!aiDrafts?.data || aiDrafts.data.length === 0 ? (
+      {/* {!aiDrafts?.data || aiDrafts.data.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <div className="text-6xl mb-3">🕰️</div>
@@ -138,7 +138,6 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Original vs Translated */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="font-semibold text-sm">Original Content</Label>
@@ -163,7 +162,6 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
                   </div>
                 </div>
 
-                {/* AI Draft Details */}
                 <div className="bg-gray-50 p-3 rounded">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
@@ -185,7 +183,6 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
                   </div>
                 </div>
 
-                {/* Review Comments */}
                 <div className="space-y-2">
                   <Label htmlFor={`comments-${aiDraft.id}`}>Review Comments (Optional)</Label>
                   <Textarea
@@ -197,7 +194,6 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
                   />
                 </div>
 
-                {/* Actions */}
                 <div className="flex gap-3 pt-2">
                   <Button
                     onClick={() => handleApprove(aiDraft.id)}
@@ -216,7 +212,6 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
                   </Button>
                 </div>
 
-                {/* Success Message */}
                 {approveAIDraft.isSuccess && (
                   <div className="bg-green-50 border border-green-200 p-3 rounded">
                     <p className="text-green-800 text-sm">
@@ -228,7 +223,7 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
             </Card>
           ))}
         </div>
-      )}
+      )} */}
     </div>
   )
 }
