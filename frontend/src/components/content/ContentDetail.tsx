@@ -17,6 +17,8 @@ import { ContentType, ReviewState, Priority, TranslateContentDto } from '@/types
 import { Loader2, ArrowLeft, Globe, Copy, Edit, CheckCircle, Check, X, Send, Languages } from 'lucide-react'
 import { ContentEdit } from './ContentEdit'
 import { TranslationOverview } from './TranslationOverview'
+import { RejectionModal } from '@/components/ui/rejection-modal'
+import { toast } from 'sonner'
 
 interface ContentDetailProps {
   contentId: string
@@ -31,6 +33,7 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
   const [translationType, setTranslationType] = useState<'literal' | 'localized' | 'culturally_adapted'>('localized')
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState<'details' | 'translations'>('details')
+  const [showRejectionModal, setShowRejectionModal] = useState(false)
 
   // Fetch content data
   const { data: contentResponse, isLoading, error } = useContent(contentId)
@@ -99,7 +102,9 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
 
     // Check if content is approved for translation
     if (content.reviewState !== ReviewState.APPROVED) {
-      alert('Content must be approved before translation. Please approve the content first.')
+      toast.warning('⚠️ Content Not Ready for Translation', {
+        description: 'Content must be approved before translation. Please approve the content first.'
+      })
       return
     }
 
@@ -150,10 +155,11 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
     }
   }
 
-  const handleReject = async () => {
-    const reason = prompt('Please provide a reason for rejection:')
-    if (!reason) return
+  const handleReject = () => {
+    setShowRejectionModal(true)
+  }
 
+  const handleConfirmReject = async (reason: string, suggestions?: string) => {
     try {
       await rejectContent({
         id: contentId,
@@ -161,7 +167,7 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
           reviewerId: 'current-user@example.com', // TODO: Get from auth context
           reviewerName: 'Current User', // TODO: Get from auth context
           reason,
-          suggestions: 'Please review and address the concerns mentioned.'
+          suggestions: suggestions || 'Please review and address the concerns mentioned.'
         }
       })
     } catch (error) {
@@ -667,6 +673,15 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
           }}
         />
       )}
+
+      {/* Rejection Modal */}
+      <RejectionModal
+        isOpen={showRejectionModal}
+        onClose={() => setShowRejectionModal(false)}
+        onConfirm={handleConfirmReject}
+        isSubmitting={isRejecting}
+        contentTitle={content?.title || 'this content'}
+      />
     </div>
   )
 }

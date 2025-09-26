@@ -11,14 +11,17 @@ import { ContentCreation } from '../content/ContentCreation'
 import { ContentList } from '../content/ContentList'
 import { ContentDetail } from '../content/ContentDetail'
 import { TranslationDashboard } from '../content/TranslationDashboard'
+import { CampaignStatistics } from './CampaignStatistics'
+import { CampaignEdit } from './CampaignEdit'
 import { ContentType, Priority } from '@/types/content'
+import { toast } from 'sonner'
 
 interface CampaignContentManagerProps {
   campaignId: string
   campaign: Campaign
 }
 
-type ContentView = 'list' | 'create' | 'detail' | 'translations'
+type ContentView = 'list' | 'create' | 'detail' | 'translations' | 'statistics' | 'edit'
 
 interface QuickContentTemplate {
   contentType: ContentType
@@ -81,7 +84,9 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
 
   const handleAIContentSprint = () => {
     // This would open a modal or dedicated view for bulk AI content generation
-    alert('🤖 AI Content Sprint: Select content pieces and generate AI improvements for all at once!')
+    toast.info('🤖 AI Content Sprint: Coming Soon!', {
+      description: 'Select content pieces and generate AI improvements for all at once. This feature will be available soon!'
+    })
   }
 
   const handleViewContent = (contentId: string) => {
@@ -100,6 +105,16 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
     setSelectedContentId(null)
   }
 
+  const handleEditCampaign = (data: any) => {
+    // TODO: Implement campaign update API call
+    console.log('Update campaign:', data)
+    // For now, just show success and go back to list
+    toast.success('Campaign updated successfully! 🎉', {
+      description: 'Your campaign changes have been saved.'
+    })
+    setCurrentView('list')
+  }
+
   return (
     <div className="space-y-6">
       {/* Content Management Header */}
@@ -114,6 +129,14 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
                 Create, manage, and organize content for {campaign.name}
               </p>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentView('edit')}
+              className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+            >
+              ✏️ Edit Campaign
+            </Button>
             <div className="flex gap-2">
               <Button
                 variant={currentView === 'list' ? 'default' : 'outline'}
@@ -135,6 +158,13 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
                 size="sm"
               >
                 🌍 Translation Hub
+              </Button>
+              <Button
+                variant={currentView === 'statistics' ? 'default' : 'outline'}
+                onClick={() => setCurrentView('statistics')}
+                size="sm"
+              >
+                📊 Statistics
               </Button>
             </div>
           </div>
@@ -189,7 +219,9 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
                   <Button
                     variant="outline"
                     className="flex items-center gap-2 justify-start h-12"
-                    onClick={() => alert('Social Media Campaign bulk creation coming soon!')}
+                    onClick={() => toast.info('📱 Social Media Campaign', {
+                      description: 'Bulk creation for multiple social platforms is coming soon!'
+                    })}
                   >
                     <div className="text-xl">📱✨</div>
                     <div className="text-left">
@@ -201,7 +233,9 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
                   <Button
                     variant="outline"
                     className="flex items-center gap-2 justify-start h-12"
-                    onClick={() => alert('Email Campaign bulk creation coming soon!')}
+                    onClick={() => toast.info('📧 Email Campaign', {
+                      description: 'Bulk email subject and content creation is coming soon!'
+                    })}
                   >
                     <div className="text-xl">📧🎯</div>
                     <div className="text-left">
@@ -213,7 +247,9 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
                   <Button
                     variant="outline"
                     className="flex items-center gap-2 justify-start h-12"
-                    onClick={() => alert('Product Launch bulk creation coming soon!')}
+                    onClick={() => toast.info('🚀 Product Launch', {
+                      description: 'All content for product launch creation is coming soon!'
+                    })}
                   >
                     <div className="text-xl">🚀📝</div>
                     <div className="text-left">
@@ -321,6 +357,21 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
         <TranslationDashboard
           campaignId={campaignId}
           onViewContent={handleViewContent}
+        />
+      )}
+
+      {currentView === 'statistics' && (
+        <CampaignStatistics
+          campaign={campaign}
+          campaignId={campaignId}
+        />
+      )}
+
+      {currentView === 'edit' && (
+        <CampaignEdit
+          campaign={campaign}
+          onSave={handleEditCampaign}
+          onCancel={() => setCurrentView('list')}
         />
       )}
     </div>

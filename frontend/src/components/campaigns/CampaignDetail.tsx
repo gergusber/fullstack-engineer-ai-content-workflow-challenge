@@ -195,34 +195,7 @@ export function CampaignDetail({ campaignId }: CampaignDetailProps) {
               </CardContent>
             </Card>
 
-            {/* Campaign Stats Placeholder */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  📈 Campaign Statistics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">0</div>
-                    <div className="text-sm text-gray-600">Content Pieces</div>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">0</div>
-                    <div className="text-sm text-gray-600">Published</div>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-yellow-600">0</div>
-                    <div className="text-sm text-gray-600">In Review</div>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">0</div>
-                    <div className="text-sm text-gray-600">Translations</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* <CampaignContentAnalytics campaignId={campaignId} /> */}
           </div>
         )}
 
