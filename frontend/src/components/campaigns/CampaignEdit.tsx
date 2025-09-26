@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Campaign } from '@/types/campaign'
-import { Save, X, RotateCcw, Edit } from 'lucide-react'
+import { Save, X, RotateCcw, Edit, Play, Pause, CheckCircle, Archive } from 'lucide-react'
 
 // Campaign edit schema
 const campaignEditSchema = z.object({
@@ -54,10 +54,10 @@ export function CampaignEdit({
   })
 
   const statusOptions = [
-    { value: 'active', label: '🟢 Active', description: 'Campaign is currently running' },
-    { value: 'paused', label: '⏸️ Paused', description: 'Campaign is temporarily stopped' },
-    { value: 'completed', label: '✅ Completed', description: 'Campaign has finished successfully' },
-    { value: 'archived', label: '📦 Archived', description: 'Campaign is archived for reference' },
+    { value: 'active', label: 'Active', description: 'Campaign is currently running', icon: Play },
+    { value: 'paused', label: 'Paused', description: 'Campaign is temporarily stopped', icon: Pause },
+    { value: 'completed', label: 'Completed', description: 'Campaign has finished successfully', icon: CheckCircle },
+    { value: 'archived', label: 'Archived', description: 'Campaign is archived for reference', icon: Archive },
   ]
 
   const getStatusColor = (status: string) => {
@@ -164,19 +164,25 @@ export function CampaignEdit({
 
             {/* Status Descriptions */}
             <div className="grid grid-cols-2 gap-2 mt-3">
-              {statusOptions.map((option) => (
-                <div
-                  key={option.value}
-                  className={`p-2 rounded border text-xs ${
-                    form.watch('status') === option.value
-                      ? 'bg-blue-50 border-blue-200'
-                      : 'bg-gray-50 border-gray-200'
-                  }`}
-                >
-                  <div className="font-medium">{option.label}</div>
-                  <div className="text-gray-600">{option.description}</div>
-                </div>
-              ))}
+              {statusOptions.map((option) => {
+                const IconComponent = option.icon
+                return (
+                  <div
+                    key={option.value}
+                    className={`p-2 rounded border text-xs ${
+                      form.watch('status') === option.value
+                        ? 'bg-blue-50 border-blue-200'
+                        : 'bg-gray-50 border-gray-200'
+                    }`}
+                  >
+                    <div className="font-medium flex items-center gap-1">
+                      <IconComponent className="h-3 w-3" />
+                      {option.label}
+                    </div>
+                    <div className="text-gray-600">{option.description}</div>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -185,7 +191,16 @@ export function CampaignEdit({
             <div className="flex items-center justify-between mb-2">
               <h4 className="font-medium text-sm">Current Campaign Status</h4>
               <Badge className={getStatusColor(form.watch('status') || 'active')} variant="secondary">
-                {statusOptions.find(s => s.value === form.watch('status'))?.label || 'Active'}
+                {(() => {
+                  const currentStatus = statusOptions.find(s => s.value === form.watch('status'))
+                  const IconComponent = currentStatus?.icon || Play
+                  return (
+                    <span className="flex items-center gap-1">
+                      <IconComponent className="h-3 w-3" />
+                      {currentStatus?.label || 'Active'}
+                    </span>
+                  )
+                })()}
               </Badge>
             </div>
             <div className="text-xs text-gray-600">

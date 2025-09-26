@@ -39,16 +39,8 @@ import {
     @Get()
     async findAll(@Query('status') status?: CampaignStatus, @Query('search') search?: string) {
       try {
-        let campaigns;
-        
-        if (status) {
-          campaigns = await this.campaignsService.findByStatus(status);
-        } else if (search) {
-          campaigns = await this.campaignsService.searchCampaigns(search);
-        } else {
-          campaigns = await this.campaignsService.findAll();
-        }
-  
+        const campaigns = await this.campaignsService.findWithFilters(status, search);
+
         return {
           success: true,
           data: campaigns,

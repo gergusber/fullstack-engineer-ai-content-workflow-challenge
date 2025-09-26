@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import { Rocket, Plus, AlertTriangle, RotateCcw, Search, Edit, BarChart3 } from 'lucide-react'
 
 interface CampaignListProps {
   onCreateNew?: () => void
@@ -40,17 +41,9 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
 
   const campaigns = campaignsResponse?.data || []
 
-  // Client-side filtering for tags (since backend might not support tag filtering)
-  const filteredCampaigns = campaigns.filter(campaign => {
-    if (!searchTerm.trim()) return true
-
-    // Additional client-side filtering for tags if backend doesn't handle it
-    const matchesClientSearch = campaign.tags?.some(tag =>
-      tag.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-
-    return matchesClientSearch || true // Backend already handles name/description search
-  })
+  // The backend now handles all filtering, so we can use the data directly
+  // Only minimal client-side filtering if backend doesn't handle something specific
+  const filteredCampaigns = campaigns
 
   const getStatusColor = (status: Campaign['status']) => {
     switch (status) {
@@ -68,11 +61,17 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">🚀 Campaigns</h1>
-          <p className="text-gray-600 mt-1">Manage your marketing campaigns and content workflows</p>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Rocket className="h-8 w-8" />
+            Campaigns
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Manage your marketing campaigns and content workflows
+          </p>
         </div>
         <Button onClick={onCreateNew}>
-          ➕ Create New Campaign
+          <Plus className="h-4 w-4 mr-2" />
+          Create New Campaign
         </Button>
       </div>
 
@@ -98,7 +97,9 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
                 id="status-filter"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as Campaign['status'] | 'all')}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as Campaign["status"] | "all")
+                }
               >
                 <option value="all">All Statuses</option>
                 <option value="draft">Draft</option>
@@ -117,13 +118,13 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
         <p className="text-sm text-gray-600">
           Showing {filteredCampaigns.length} of {campaigns.length} campaigns
         </p>
-        {(searchTerm || statusFilter !== 'all') && (
+        {(searchTerm || statusFilter !== "all") && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
-              setSearchTerm('')
-              setStatusFilter('all')
+              setSearchTerm("");
+              setStatusFilter("all");
             }}
           >
             Clear Filters
@@ -137,7 +138,9 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
           <CardContent className="text-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <h3 className="text-lg font-semibold mb-2">Loading campaigns...</h3>
-            <p className="text-gray-600">Please wait while we fetch your campaigns.</p>
+            <p className="text-gray-600">
+              Please wait while we fetch your campaigns.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -146,13 +149,18 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
       {error && !isLoading && (
         <Card>
           <CardContent className="text-center py-12">
-            <div className="text-6xl mb-4">⚠️</div>
-            <h3 className="text-lg font-semibold mb-2 text-red-600">Failed to load campaigns</h3>
+            <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-500" />
+            <h3 className="text-lg font-semibold mb-2 text-red-600">
+              Failed to load campaigns
+            </h3>
             <p className="text-gray-600 mb-4">
-              {error instanceof Error ? error.message : 'An unexpected error occurred'}
+              {error instanceof Error
+                ? error.message
+                : "An unexpected error occurred"}
             </p>
             <Button onClick={() => window.location.reload()}>
-              🔄 Retry
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Retry
             </Button>
           </CardContent>
         </Card>
@@ -162,22 +170,26 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
       {!isLoading && !error && filteredCampaigns.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
-            <div className="text-6xl mb-4">🔍</div>
+            <Search className="h-16 w-16 mx-auto mb-4 text-gray-400" />
             <h3 className="text-lg font-semibold mb-2">No campaigns found</h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm || statusFilter !== 'all'
-                ? 'Try adjusting your search or filter criteria.'
-                : 'Get started by creating your first campaign.'}
+              {searchTerm || statusFilter !== "all"
+                ? "Try adjusting your search or filter criteria."
+                : "Get started by creating your first campaign."}
             </p>
             <Button onClick={onCreateNew}>
-              ➕ Create First Campaign
+              <Plus className="h-4 w-4 mr-2" />
+              Create First Campaign
             </Button>
           </CardContent>
         </Card>
       ) : !isLoading && !error ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredCampaigns.map((campaign) => (
-            <Card key={campaign.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={campaign.id}
+              className="hover:shadow-md transition-shadow flex flex-col h-full"
+            >
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <Link href={`/campaign/${campaign.id}`}>
@@ -185,73 +197,98 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
                       {campaign.name}
                     </CardTitle>
                   </Link>
-                  <Badge className={getStatusColor(campaign.status as Campaign['status'])} variant="secondary">
+                  <Badge
+                    className={getStatusColor(
+                      campaign.status as Campaign["status"]
+                    )}
+                    variant="secondary"
+                  >
                     {campaign.status}
                   </Badge>
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-4">
-                <p className="text-sm text-gray-600 line-clamp-2">
-                  {campaign.description}
-                </p>
+              <CardContent className="flex-1 flex flex-col">
+                <div className="space-y-4 flex-1">
+                  <p className="text-sm text-gray-600 line-clamp-2">
+                    {campaign.description}
+                  </p>
 
-                {/* Target Markets */}
-                {campaign.targetMarkets && campaign.targetMarkets.length > 0 && (
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Target Markets</Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {campaign.targetMarkets.map((market) => (
-                        <Badge key={market} variant="outline" className="text-xs">
-                          {market}
-                        </Badge>
-                      ))}
+                  {/* Target Markets */}
+                  {campaign.targetMarkets &&
+                    campaign.targetMarkets.length > 0 && (
+                      <div>
+                        <Label className="text-xs font-medium text-gray-500">
+                          Target Markets
+                        </Label>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {campaign.targetMarkets.map((market) => (
+                            <Badge
+                              key={market}
+                              variant="outline"
+                              className="text-xs"
+                            >
+                              {market}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Tags */}
+                  {campaign.tags && campaign.tags.length > 0 && (
+                    <div>
+                      <Label className="text-xs font-medium text-gray-500">
+                        Tags
+                      </Label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {campaign.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            #{tag}
+                          </Badge>
+                        ))}
+                        {campaign.tags.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{campaign.tags.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Metadata */}
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <div>Created by: {campaign.createdBy}</div>
+                    <div>
+                      Created:{" "}
+                      {new Date(campaign.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                      })}
                     </div>
                   </div>
-                )}
-
-                {/* Tags */}
-                {campaign.tags && campaign.tags.length > 0 && (
-                  <div>
-                    <Label className="text-xs font-medium text-gray-500">Tags</Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {campaign.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          #{tag}
-                        </Badge>
-                      ))}
-                      {campaign.tags.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{campaign.tags.length - 3} more
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Metadata */}
-                <div className="text-xs text-gray-500 space-y-1">
-                  <div>Created by: {campaign.createdBy}</div>
-                  <div>Created: {new Date(campaign.createdAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                  })}</div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 pt-2">
+                {/* Actions - Always at bottom */}
+                <div className="flex gap-2 pt-4 mt-auto border-t border-gray-100">
                   <Button
                     variant="outline"
                     size="sm"
                     className="flex-1"
                     onClick={() => onEditCampaign?.(campaign as Campaign)}
                   >
-                    📝 Edit
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
                   </Button>
                   <Link href={`/campaign/${campaign.id}`}>
-                    <Button variant="outline" size="sm" className="flex-1 w-full">
-                      📊 View Content
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 w-full"
+                    >
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      View Content
                     </Button>
                   </Link>
                 </div>
@@ -261,5 +298,5 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
         </div>
       ) : null}
     </div>
-  )
+  );
 }

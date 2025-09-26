@@ -15,7 +15,11 @@ import {
   TrendingUp,
   Languages,
   Target,
-  Calendar
+  Calendar,
+  MessageSquare,
+  Mail,
+  Tag,
+  ShoppingBag
 } from 'lucide-react'
 
 interface CampaignStatisticsProps {
@@ -72,15 +76,15 @@ export function CampaignStatistics({ campaign, campaignId }: CampaignStatisticsP
 
   const getContentTypeIcon = (type: ContentType) => {
     switch (type) {
-      case ContentType.BLOG_POST: return '📝'
-      case ContentType.SOCIAL_POST: return '📱'
-      case ContentType.EMAIL_SUBJECT: return '📧'
-      case ContentType.HEADLINE: return '🏷️'
-      case ContentType.DESCRIPTION: return '📄'
-      case ContentType.AD_COPY: return '🎯'
-      case ContentType.PRODUCT_DESC: return '🛍️'
-      case ContentType.LANDING_PAGE: return '🌐'
-      default: return '📄'
+      case ContentType.BLOG_POST: return <FileText className="h-4 w-4" />
+      case ContentType.SOCIAL_POST: return <MessageSquare className="h-4 w-4" />
+      case ContentType.EMAIL_SUBJECT: return <Mail className="h-4 w-4" />
+      case ContentType.HEADLINE: return <Tag className="h-4 w-4" />
+      case ContentType.DESCRIPTION: return <FileText className="h-4 w-4" />
+      case ContentType.AD_COPY: return <Target className="h-4 w-4" />
+      case ContentType.PRODUCT_DESC: return <ShoppingBag className="h-4 w-4" />
+      case ContentType.LANDING_PAGE: return <Globe className="h-4 w-4" />
+      default: return <FileText className="h-4 w-4" />
     }
   }
 

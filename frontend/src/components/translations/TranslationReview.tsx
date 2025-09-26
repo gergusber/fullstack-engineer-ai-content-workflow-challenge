@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Loader2, Clock, CheckCircle } from 'lucide-react'
 
 interface TranslationReviewProps {
   contentId?: string
@@ -42,7 +43,8 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="ml-2">🔄 Loading pending translations...</span>
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        Loading pending translations...
       </div>
     )
   }
@@ -98,7 +100,7 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
       {/* {!aiDrafts?.data || aiDrafts.data.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
-            <div className="text-6xl mb-3">🕰️</div>
+            <Clock className="h-16 w-16 mx-auto mb-3 text-gray-400" />
             <h3 className="text-lg font-semibold mb-2">No Pending AI Draft Translations</h3>
             <p className="text-gray-600">
               {selectedContentId
@@ -200,7 +202,17 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
                     disabled={approveAIDraft.isPending}
                     className="bg-green-600 hover:bg-green-700"
                   >
-                    ✅ {approveAIDraft.isPending ? 'Approving...' : 'Approve & Move to Translations'}
+                    {approveAIDraft.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approve & Move to Translations
+                      </>
+                    )}
                   </Button>
 
                   <Button variant="destructive">
@@ -215,7 +227,7 @@ export function TranslationReview({ contentId }: TranslationReviewProps) {
                 {approveAIDraft.isSuccess && (
                   <div className="bg-green-50 border border-green-200 p-3 rounded">
                     <p className="text-green-800 text-sm">
-                      ✅ Translation approved successfully! The AI draft has been converted to a proper translation record and is now available for publication.
+                      Translation approved successfully! The AI draft has been converted to a proper translation record and is now available for publication.
                     </p>
                   </div>
                 )}

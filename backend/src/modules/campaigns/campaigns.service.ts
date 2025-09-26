@@ -145,6 +145,31 @@ export class CampaignsService {
       .getMany();
   }
 
+  async findWithFilters(status?: CampaignStatus, search?: string): Promise<Campaign[]> {
+    const queryBuilder = this.campaignsRepository
+      .createQueryBuilder('campaign')
+      .leftJoinAndSelect('campaign.contentPieces', 'contentPieces')
+      .leftJoinAndSelect('contentPieces.aiDrafts', 'aiDrafts')
+      .leftJoinAndSelect('contentPieces.reviews', 'reviews');
+
+    // Apply status filter if provided
+    if (status) {
+      queryBuilder.andWhere('campaign.status = :status', { status });
+    }
+
+    // Apply search filter if provided
+    if (search) {
+      queryBuilder.andWhere(
+        '(campaign.name ILIKE :searchTerm OR campaign.description ILIKE :searchTerm OR :searchTerm = ANY(campaign.target_markets) OR :searchTerm = ANY(campaign.tags))',
+        { searchTerm: `%${search}%` }
+      );
+    }
+
+    return await queryBuilder
+      .orderBy('campaign.updatedAt', 'DESC')
+      .getMany();
+  }
+
   private groupByReviewState(contentPieces: ContentPiece[]): Record<string, number> {
     return contentPieces.reduce((acc, piece) => {
       const state = piece.reviewState;

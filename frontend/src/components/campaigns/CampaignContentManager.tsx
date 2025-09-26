@@ -1,92 +1,142 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Campaign } from '@/types/campaign'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
-import { ContentCreation } from '../content/ContentCreation'
-import { ContentList } from '../content/ContentList'
-import { ContentDetail } from '../content/ContentDetail'
-import { TranslationDashboard } from '../content/TranslationDashboard'
-import { CampaignStatistics } from './CampaignStatistics'
-import { CampaignEdit } from './CampaignEdit'
-import { ContentType, Priority, ReviewState } from '@/types/content'
-import { CampaignStatus } from '@/types/campaign'
-import { useContentList } from '@/lib/hooks/api/content/queries'
-import { toast } from 'sonner'
+import { useState } from "react";
+import { Campaign } from "@/types/campaign";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { ContentCreation } from "../content/ContentCreation";
+import { ContentList } from "../content/ContentList";
+import { ContentDetail } from "../content/ContentDetail";
+import { TranslationDashboard } from "../content/TranslationDashboard";
+import { CampaignStatistics } from "./CampaignStatistics";
+import { CampaignEdit } from "./CampaignEdit";
+import { ContentType, ReviewState } from "@/types/content";
+import { CampaignStatus } from "@/types/campaign";
+import { useContentList } from "@/lib/hooks/api/content/queries";
+import { toast } from "sonner";
+import {
+  FileText,
+  ShoppingBag,
+  Tag,
+  Edit,
+  Plus,
+  BarChart3,
+  Rocket,
+  MessageSquare,
+  Mail,
+  Target,
+  BrainCircuit,
+  Languages,
+  Zap,
+} from "lucide-react";
 
 interface CampaignContentManagerProps {
-  campaignId: string
-  campaign: Campaign
+  campaignId: string;
+  campaign: Campaign;
 }
 
-type ContentView = 'list' | 'create' | 'detail' | 'translations' | 'statistics' | 'edit'
+type ContentView =
+  | "list"
+  | "create"
+  | "detail"
+  | "translations"
+  | "statistics"
+  | "edit";
 
 interface QuickContentTemplate {
-  contentType: ContentType
-  title: string
-  description: string
-  icon: string
+  contentType: ContentType;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
 }
 
-export function CampaignContentManager({ campaignId, campaign }: CampaignContentManagerProps) {
-  const [currentView, setCurrentView] = useState<ContentView>('list')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [contentTypeFilter, setContentTypeFilter] = useState<string>('all')
-  const [quickTemplate, setQuickTemplate] = useState<QuickContentTemplate | null>(null)
-  const [selectedContentId, setSelectedContentId] = useState<string | null>(null)
+export function CampaignContentManager({
+  campaignId,
+  campaign,
+}: CampaignContentManagerProps) {
+  const [currentView, setCurrentView] = useState<ContentView>("list");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [contentTypeFilter, setContentTypeFilter] = useState<string>("all");
+  const [quickTemplate, setQuickTemplate] =
+    useState<QuickContentTemplate | null>(null);
+  const [selectedContentId, setSelectedContentId] = useState<string | null>(
+    null
+  );
 
   // Get content stats for workflow status
   const { data: contentResponse } = useContentList({
     campaignId,
     limit: 1000,
-  })
+  });
 
-  const allContent = contentResponse?.data || []
+  const allContent = contentResponse?.data || [];
   const contentStats = {
     total: allContent.length,
-    approved: allContent.filter(c => c.reviewState === ReviewState.APPROVED).length,
-    pending: allContent.filter(c =>
-      c.reviewState === ReviewState.PENDING_REVIEW ||
-      c.reviewState === ReviewState.REVIEWED
+    approved: allContent.filter((c) => c.reviewState === ReviewState.APPROVED)
+      .length,
+    pending: allContent.filter(
+      (c) =>
+        c.reviewState === ReviewState.PENDING_REVIEW ||
+        c.reviewState === ReviewState.REVIEWED
     ).length,
-    draft: allContent.filter(c => c.reviewState === ReviewState.DRAFT).length,
-    rejected: allContent.filter(c => c.reviewState === ReviewState.REJECTED).length,
-    aiSuggested: allContent.filter(c => c.reviewState === ReviewState.AI_SUGGESTED).length,
-  }
+    draft: allContent.filter((c) => c.reviewState === ReviewState.DRAFT).length,
+    rejected: allContent.filter((c) => c.reviewState === ReviewState.REJECTED)
+      .length,
+    aiSuggested: allContent.filter(
+      (c) => c.reviewState === ReviewState.AI_SUGGESTED
+    ).length,
+  };
 
   const getStatusBadgeColor = (status: CampaignStatus) => {
     switch (status) {
-      case CampaignStatus.DRAFT: return 'bg-gray-100 text-gray-800'
-      case CampaignStatus.ACTIVE: return 'bg-green-100 text-green-800'
-      case CampaignStatus.PAUSED: return 'bg-yellow-100 text-yellow-800'
-      case CampaignStatus.COMPLETED: return 'bg-blue-100 text-blue-800'
-      case CampaignStatus.ARCHIVED: return 'bg-purple-100 text-purple-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case CampaignStatus.DRAFT:
+        return "bg-gray-100 text-gray-800";
+      case CampaignStatus.ACTIVE:
+        return "bg-green-100 text-green-800";
+      case CampaignStatus.PAUSED:
+        return "bg-yellow-100 text-yellow-800";
+      case CampaignStatus.COMPLETED:
+        return "bg-blue-100 text-blue-800";
+      case CampaignStatus.ARCHIVED:
+        return "bg-purple-100 text-purple-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
   const getWorkflowMessage = () => {
     if (contentStats.total === 0) {
-      return "No content yet - create content to start the workflow"
+      return "No content yet - create content to start the workflow";
     }
-    if (contentStats.approved === contentStats.total && contentStats.total > 0) {
-      return "🎉 All content approved! Campaign ready for completion."
+    if (
+      contentStats.approved === contentStats.total &&
+      contentStats.total > 0
+    ) {
+      return "🎉 All content approved! Campaign ready for completion.";
     }
-    if (contentStats.approved > 0 && (contentStats.pending > 0 || contentStats.aiSuggested > 0)) {
-      return `✨ ${contentStats.approved} approved, ${contentStats.pending + contentStats.aiSuggested} in review`
+    if (
+      contentStats.approved > 0 &&
+      (contentStats.pending > 0 || contentStats.aiSuggested > 0)
+    ) {
+      return `✨ ${contentStats.approved} approved, ${
+        contentStats.pending + contentStats.aiSuggested
+      } in review`;
     }
     if (contentStats.pending > 0 || contentStats.aiSuggested > 0) {
-      return `⏳ ${contentStats.pending + contentStats.aiSuggested} content pieces awaiting review`
+      return `⏳ ${
+        contentStats.pending + contentStats.aiSuggested
+      } content pieces awaiting review`;
     }
     if (contentStats.draft > 0 || contentStats.rejected > 0) {
-      return `📝 ${contentStats.draft + contentStats.rejected} content pieces need work`
+      return `${
+        contentStats.draft + contentStats.rejected
+      } content pieces need work`;
     }
-    return "Ready for content creation"
-  }
+    return "Ready for content creation";
+  };
 
   // Quick content templates
   const contentTemplates: QuickContentTemplate[] = [
@@ -94,77 +144,78 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
       contentType: ContentType.BLOG_POST,
       title: "Blog Post",
       description: "Create engaging long-form content",
-      icon: "📝"
+      icon: <FileText className="h-5 w-5" />,
     },
     {
       contentType: ContentType.SOCIAL_POST,
       title: "Social Media Post",
       description: "Quick and engaging social content",
-      icon: "📱"
+      icon: <MessageSquare className="h-5 w-5" />,
     },
     {
       contentType: ContentType.EMAIL_SUBJECT,
       title: "Email Subject Line",
       description: "Compelling email headlines",
-      icon: "📧"
+      icon: <Mail className="h-5 w-5" />,
     },
     {
       contentType: ContentType.AD_COPY,
       title: "Advertisement Copy",
       description: "Persuasive ad content",
-      icon: "🎯"
+      icon: <Target className="h-5 w-5" />,
     },
     {
       contentType: ContentType.PRODUCT_DESC,
       title: "Product Description",
       description: "Detailed product information",
-      icon: "🛍️"
+      icon: <ShoppingBag className="h-5 w-5" />,
     },
     {
       contentType: ContentType.HEADLINE,
       title: "Headlines & Titles",
       description: "Catchy headlines and titles",
-      icon: "🏷️"
-    }
-  ]
+      icon: <Tag className="h-5 w-5" />,
+    },
+  ];
 
   const handleQuickCreate = (template: QuickContentTemplate) => {
-    setQuickTemplate(template)
-    setCurrentView('create')
-  }
+    setQuickTemplate(template);
+    setCurrentView("create");
+  };
 
   const handleAIContentSprint = () => {
     // This would open a modal or dedicated view for bulk AI content generation
-    toast.info('🤖 AI Content Sprint: Coming Soon!', {
-      description: 'Select content pieces and generate AI improvements for all at once. This feature will be available soon!'
-    })
-  }
+    toast.info("🤖 AI Content Sprint: Coming Soon!", {
+      description:
+        "Select content pieces and generate AI improvements for all at once. This feature will be available soon!",
+    });
+  };
 
   const handleViewContent = (contentId: string) => {
-    setSelectedContentId(contentId)
-    setCurrentView('detail')
-  }
+    setSelectedContentId(contentId);
+    setCurrentView("detail");
+  };
 
   const handleEditContent = (contentId: string) => {
-    setSelectedContentId(contentId)
-    setCurrentView('detail')
+    setSelectedContentId(contentId);
+    setCurrentView("detail");
     // The detail view will handle edit mode internally
-  }
+  };
 
   const handleBackToList = () => {
-    setCurrentView('list')
-    setSelectedContentId(null)
-  }
+    setCurrentView("list");
+    setSelectedContentId(null);
+  };
 
   const handleEditCampaign = (data: any) => {
     // TODO: Implement campaign update API call
-    console.log('Update campaign:', data)
+    console.log("Update campaign:", data);
     // For now, just show success and go back to list
-    toast.success('Campaign updated successfully! 🎉', {
-      description: 'Your campaign changes have been saved.'
-    })
-    setCurrentView('list')
-  }
+    toast.success("Campaign updated successfully! 🎉", {
+      description: "Your campaign changes have been saved.",
+    });
+    setCurrentView("list");
+  };
 
   return (
     <div className="space-y-6">
@@ -174,14 +225,19 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
           <div className="flex justify-between items-center">
             <div>
               <CardTitle className="flex items-center gap-2">
-                📝 Content Management
+                <FileText className="h-4 w-4 mr-2" />
+                Content Management
               </CardTitle>
               <p className="text-sm text-gray-600 mt-1">
                 Create, manage, and organize content for {campaign.name}
               </p>
               <div className="flex items-center gap-3 mt-3">
-                <Badge className={getStatusBadgeColor(campaign.status)} variant="secondary">
-                  {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                <Badge
+                  className={getStatusBadgeColor(campaign.status)}
+                  variant="secondary"
+                >
+                  {campaign.status.charAt(0).toUpperCase() +
+                    campaign.status.slice(1)}
                 </Badge>
                 <span className="text-xs text-gray-500">•</span>
                 <span className="text-xs text-gray-600">
@@ -200,39 +256,44 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentView('edit')}
+              onClick={() => setCurrentView("edit")}
               className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
             >
-              ✏️ Edit Campaign
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Campaign
             </Button>
             <div className="flex gap-2">
               <Button
-                variant={currentView === 'list' ? 'default' : 'outline'}
-                onClick={() => setCurrentView('list')}
+                variant={currentView === "list" ? "default" : "outline"}
+                onClick={() => setCurrentView("list")}
                 size="sm"
               >
-                📋 View Content
+                <FileText className="h-4 w-4 mr-2" />
+                View Content
               </Button>
               <Button
-                variant={currentView === 'create' ? 'default' : 'outline'}
-                onClick={() => setCurrentView('create')}
+                variant={currentView === "create" ? "default" : "outline"}
+                onClick={() => setCurrentView("create")}
                 size="sm"
               >
-                ➕ Create Content
+                <Plus className="h-4 w-4 mr-2" />
+                Create Content
               </Button>
               <Button
-                variant={currentView === 'translations' ? 'default' : 'outline'}
-                onClick={() => setCurrentView('translations')}
+                variant={currentView === "translations" ? "default" : "outline"}
+                onClick={() => setCurrentView("translations")}
                 size="sm"
               >
-                🌍 Translation Hub
+                <Languages className="h-4 w-4 mr-2" />
+                Translation Hub
               </Button>
               <Button
-                variant={currentView === 'statistics' ? 'default' : 'outline'}
-                onClick={() => setCurrentView('statistics')}
+                variant={currentView === "statistics" ? "default" : "outline"}
+                onClick={() => setCurrentView("statistics")}
                 size="sm"
               >
-                📊 Statistics
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Statistics
               </Button>
             </div>
           </div>
@@ -240,11 +301,12 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
       </Card>
 
       {/* Quick Action Templates */}
-      {currentView === 'list' && (
+      {currentView === "list" && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              ⚡ Quick Create
+              <Zap className="h-4 w-4 mr-2" />
+              Quick Create
             </CardTitle>
             <p className="text-sm text-gray-600">
               Start with pre-configured content types for faster creation
@@ -253,7 +315,9 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
           <CardContent>
             <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-medium mb-3">Individual Content Types</h4>
+                <h4 className="text-sm font-medium mb-3">
+                  Individual Content Types
+                </h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   {contentTemplates.map((template) => (
                     <Button
@@ -263,7 +327,9 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
                       onClick={() => handleQuickCreate(template)}
                     >
                       <div className="text-2xl">{template.icon}</div>
-                      <div className="text-xs font-medium text-center">{template.title}</div>
+                      <div className="text-xs font-medium text-center">
+                        {template.title}
+                      </div>
                     </Button>
                   ))}
                 </div>
@@ -277,52 +343,77 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
                     className="flex items-center gap-2 justify-start h-12 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 hover:from-purple-100 hover:to-blue-100"
                     onClick={handleAIContentSprint}
                   >
-                    <div className="text-xl">🤖⚡</div>
+                    <div className="text-xl">
+                      <BrainCircuit className="h-5 w-5" />
+                    </div>
                     <div className="text-left">
-                      <div className="text-sm font-medium text-purple-800">AI Content Sprint</div>
-                      <div className="text-xs text-purple-600">Bulk AI improvements</div>
+                      <div className="text-sm font-medium text-purple-800">
+                        AI Content Sprint
+                      </div>
+                      <div className="text-xs text-purple-600">
+                        Bulk AI improvements
+                      </div>
                     </div>
                   </Button>
 
                   <Button
                     variant="outline"
                     className="flex items-center gap-2 justify-start h-12"
-                    onClick={() => toast.info('📱 Social Media Campaign', {
-                      description: 'Bulk creation for multiple social platforms is coming soon!'
-                    })}
+                    onClick={() =>
+                      toast.info("📱 Social Media Campaign", {
+                        description:
+                          "Bulk creation for multiple social platforms is coming soon!",
+                      })
+                    }
                   >
-                    <div className="text-xl">📱✨</div>
+                    <div className="text-xl">
+                      <MessageSquare className="h-5 w-5" />
+                    </div>
                     <div className="text-left">
                       <div className="text-sm font-medium">Social Campaign</div>
-                      <div className="text-xs text-gray-500">Create social posts for multiple platforms</div>
+                      <div className="text-xs text-gray-500">
+                        Create posts for multiple platforms
+                      </div>
                     </div>
                   </Button>
 
                   <Button
                     variant="outline"
                     className="flex items-center gap-2 justify-start h-12"
-                    onClick={() => toast.info('📧 Email Campaign', {
-                      description: 'Bulk email subject and content creation is coming soon!'
-                    })}
+                    onClick={() =>
+                      toast.info("📧 Email Campaign", {
+                        description:
+                          "Bulk email subject and content creation is coming soon!",
+                      })
+                    }
                   >
-                    <div className="text-xl">📧🎯</div>
+                    <div className="text-xl">
+                      <Mail className="h-5 w-5" />
+                    </div>
                     <div className="text-left">
                       <div className="text-sm font-medium">Email Campaign</div>
-                      <div className="text-xs text-gray-500">Create email subjects and content</div>
+                      <div className="text-xs text-gray-500">
+                        Create email subjects and content
+                      </div>
                     </div>
                   </Button>
 
                   <Button
                     variant="outline"
                     className="flex items-center gap-2 justify-start h-12"
-                    onClick={() => toast.info('🚀 Product Launch', {
-                      description: 'All content for product launch creation is coming soon!'
-                    })}
+                    onClick={() =>
+                      toast.info("Product Launch", {
+                        description:
+                          "All content for product launch creation is coming soon!",
+                      })
+                    }
                   >
-                    <div className="text-xl">🚀📝</div>
+                    <Rocket className="h-5 w-5" />
                     <div className="text-left">
                       <div className="text-sm font-medium">Product Launch</div>
-                      <div className="text-xs text-gray-500">All content for a product launch</div>
+                      <div className="text-xs text-gray-500">
+                        All content for a product launch
+                      </div>
                     </div>
                   </Button>
                 </div>
@@ -333,7 +424,7 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
       )}
 
       {/* Content View */}
-      {currentView === 'list' && (
+      {currentView === "list" && (
         <div className="space-y-6">
           {/* Search and Filter */}
           <Card>
@@ -352,7 +443,9 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="content-type-filter">Filter by Content Type</Label>
+                  <Label htmlFor="content-type-filter">
+                    Filter by Content Type
+                  </Label>
                   <select
                     id="content-type-filter"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -361,12 +454,16 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
                   >
                     <option value="all">All Types</option>
                     {Object.values(ContentType).map((type) => {
-                      const template = contentTemplates.find(t => t.contentType === type)
+                      const template = contentTemplates.find(
+                        (t) => t.contentType === type
+                      );
                       return (
                         <option key={type} value={type}>
-                          {template ? `${template.icon} ${template.title}` : type}
+                          {template
+                            ? `${template.icon} ${template.title}`
+                            : type}
                         </option>
-                      )
+                      );
                     })}
                   </select>
                 </div>
@@ -385,14 +482,14 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
         </div>
       )}
 
-      {currentView === 'create' && (
+      {currentView === "create" && (
         <div className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center gap-4">
                 <Button
                   variant="outline"
-                  onClick={() => setCurrentView('list')}
+                  onClick={() => setCurrentView("list")}
                   size="sm"
                 >
                   ← Back to Content List
@@ -405,8 +502,8 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
                 campaignId={campaignId}
                 quickTemplate={quickTemplate}
                 onSuccess={() => {
-                  setCurrentView('list')
-                  setQuickTemplate(null)
+                  setCurrentView("list");
+                  setQuickTemplate(null);
                 }}
               />
             </CardContent>
@@ -414,34 +511,31 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
         </div>
       )}
 
-      {currentView === 'detail' && selectedContentId && (
+      {currentView === "detail" && selectedContentId && (
         <ContentDetail
           contentId={selectedContentId}
           onBack={handleBackToList}
         />
       )}
 
-      {currentView === 'translations' && (
+      {currentView === "translations" && (
         <TranslationDashboard
           campaignId={campaignId}
           onViewContent={handleViewContent}
         />
       )}
 
-      {currentView === 'statistics' && (
-        <CampaignStatistics
-          campaign={campaign}
-          campaignId={campaignId}
-        />
+      {currentView === "statistics" && (
+        <CampaignStatistics campaign={campaign} campaignId={campaignId} />
       )}
 
-      {currentView === 'edit' && (
+      {currentView === "edit" && (
         <CampaignEdit
           campaign={campaign}
           onSave={handleEditCampaign}
-          onCancel={() => setCurrentView('list')}
+          onCancel={() => setCurrentView("list")}
         />
       )}
     </div>
-  )
+  );
 }

@@ -13,12 +13,13 @@ import {
   useGenerateAIContent,
 } from "@/lib/hooks/api/content/mutations";
 import { ContentType, Priority } from "@/types/content";
+import { FileText, MessageSquare, Mail, Tag, Target, ShoppingBag, Globe, CheckCircle, Loader2, Rocket, Info, RotateCcw, Circle } from "lucide-react";
 
 interface QuickContentTemplate {
   contentType: ContentType;
   title: string;
   description: string;
-  icon: string;
+  icon: React.ReactNode;
 }
 
 // Content creation schema
@@ -70,36 +71,59 @@ export function ContentCreation({
   const getContentTypeLabel = (type: ContentType) => {
     switch (type) {
       case ContentType.BLOG_POST:
-        return "📝 Blog Post";
+        return "Blog Post";
       case ContentType.SOCIAL_POST:
-        return "📱 Social Post";
+        return "Social Post";
       case ContentType.EMAIL_SUBJECT:
-        return "📧 Email Subject";
+        return "Email Subject";
       case ContentType.HEADLINE:
-        return "🏷️ Headline";
+        return "Headline";
       case ContentType.DESCRIPTION:
-        return "📄 Description";
+        return "Description";
       case ContentType.AD_COPY:
-        return "🎯 Ad Copy";
+        return "Ad Copy";
       case ContentType.PRODUCT_DESC:
-        return "🛍️ Product Description";
+        return "Product Description";
       case ContentType.LANDING_PAGE:
-        return "🌐 Landing Page";
+        return "Landing Page";
       default:
         return type;
+    }
+  };
+
+  const getContentTypeIcon = (type: ContentType) => {
+    switch (type) {
+      case ContentType.BLOG_POST:
+        return <FileText className="h-4 w-4" />;
+      case ContentType.SOCIAL_POST:
+        return <MessageSquare className="h-4 w-4" />;
+      case ContentType.EMAIL_SUBJECT:
+        return <Mail className="h-4 w-4" />;
+      case ContentType.HEADLINE:
+        return <Tag className="h-4 w-4" />;
+      case ContentType.DESCRIPTION:
+        return <FileText className="h-4 w-4" />;
+      case ContentType.AD_COPY:
+        return <Target className="h-4 w-4" />;
+      case ContentType.PRODUCT_DESC:
+        return <ShoppingBag className="h-4 w-4" />;
+      case ContentType.LANDING_PAGE:
+        return <Globe className="h-4 w-4" />;
+      default:
+        return <FileText className="h-4 w-4" />;
     }
   };
 
   const getPriorityLabel = (priority: Priority) => {
     switch (priority) {
       case Priority.LOW:
-        return "🟢 Low";
+        return "Low";
       case Priority.MEDIUM:
-        return "🟡 Medium";
+        return "Medium";
       case Priority.HIGH:
-        return "🟠 High";
+        return "High";
       case Priority.URGENT:
-        return "🔴 Urgent";
+        return "Urgent";
       default:
         return priority;
     }
@@ -412,7 +436,17 @@ export function ContentCreation({
             Reset Form
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "🔄 Creating..." : "✅ Create Content"}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Create Content
+              </>
+            )}
           </Button>
         </div>
       </form>
@@ -462,7 +496,7 @@ export function ContentCreation({
                   }
                 >
                   <option value="original">✨ Original Content</option>
-                  <option value="variation">🔄 Content Variation</option>
+                  <option value="variation">Content Variation</option>
                   <option value="improvement">📈 Content Improvement</option>
                 </select>
               </div>
@@ -506,7 +540,7 @@ export function ContentCreation({
                 ) : aiModel === "both" ? (
                   "⚡ Compare AI Models"
                 ) : (
-                  `🚀 Generate with ${
+                  `Generate with ${
                     aiModel === "claude" ? "Claude" : "OpenAI"
                   }`
                 )}
@@ -523,7 +557,7 @@ export function ContentCreation({
 
             <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-4">
               <div className="flex items-start gap-2">
-                <div className="text-blue-600 mt-0.5">ℹ️</div>
+                <Info className="h-4 w-4 text-blue-600 mt-0.5" />
                 <div className="text-sm text-blue-800">
                   <strong>AI Generation Process:</strong>
                   <ul className="mt-1 space-y-1 list-disc list-inside">

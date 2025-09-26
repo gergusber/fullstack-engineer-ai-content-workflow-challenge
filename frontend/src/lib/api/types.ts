@@ -1,3 +1,5 @@
+import { CampaignStatus } from '@/types/campaign'
+
 // Base entity types
 export interface BaseEntity {
   id: string
@@ -9,7 +11,7 @@ export interface BaseEntity {
 export interface Campaign extends BaseEntity {
   name: string
   description?: string
-  status: 'draft' | 'active' | 'paused' | 'completed' | 'archived'
+  status: CampaignStatus
   targetMarkets?: string[]
   tags?: string[]
   createdBy?: string
@@ -65,7 +67,7 @@ export interface AIDraft extends BaseEntity {
 export interface CreateCampaignDto {
   name: string
   description?: string
-  status?: 'draft' | 'active' | 'paused' | 'completed' | 'archived'
+  status?: CampaignStatus
   targetMarkets?: string[]
   tags?: string[]
   createdBy?: string

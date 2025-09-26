@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Rocket, Loader2 } from 'lucide-react'
 
 // Campaign creation schema (matching backend API)
 const campaignSchema = z.object({
@@ -72,7 +73,8 @@ export function CampaignCreation({ onSuccess }: CampaignCreationProps) {
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
-          🚀 Create New Campaign
+          <Rocket className="h-5 w-5 mr-2" />
+          Create New Campaign
         </CardTitle>
         <p className="text-muted-foreground">
           Set up a new marketing campaign with detailed targeting and objectives.
@@ -191,7 +193,17 @@ export function CampaignCreation({ onSuccess }: CampaignCreationProps) {
               Reset Form
             </Button>
             <Button type="submit" disabled={createCampaign.isPending}>
-              {createCampaign.isPending ? '🔄 Creating...' : '🚀 Create Campaign'}
+              {createCampaign.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Rocket className="h-4 w-4 mr-2" />
+                  Create Campaign
+                </>
+              )}
             </Button>
           </div>
         </form>

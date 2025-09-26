@@ -13,7 +13,7 @@ import {
 } from '@/lib/hooks/api/content/mutations'
 import { useContentWorkflow } from '@/lib/hooks/useContentWorkflow'
 import { ContentType, ReviewState, Priority, TranslateContentDto } from '@/types/content'
-import { Loader2, ArrowLeft, Globe, Copy, Edit, CheckCircle, Check, X, Send, Languages } from 'lucide-react'
+import { Loader2, ArrowLeft, Globe, Copy, Edit, CheckCircle, Check, X, Send, Languages, FileText, MessageSquare, Mail, Tag, Target, ShoppingBag, AlertTriangle } from 'lucide-react'
 import { ContentEdit } from './ContentEdit'
 import { TranslationOverview } from './TranslationOverview'
 import { RejectionModal } from '@/components/ui/rejection-modal'
@@ -53,15 +53,15 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
 
   const getContentTypeIcon = (type: ContentType) => {
     switch (type) {
-      case ContentType.BLOG_POST: return '📝'
-      case ContentType.SOCIAL_POST: return '📱'
-      case ContentType.EMAIL_SUBJECT: return '📧'
-      case ContentType.HEADLINE: return '🏷️'
-      case ContentType.DESCRIPTION: return '📄'
-      case ContentType.AD_COPY: return '🎯'
-      case ContentType.PRODUCT_DESC: return '🛍️'
-      case ContentType.LANDING_PAGE: return '🌐'
-      default: return '📄'
+      case ContentType.BLOG_POST: return <FileText className="h-4 w-4" />
+      case ContentType.SOCIAL_POST: return <MessageSquare className="h-4 w-4" />
+      case ContentType.EMAIL_SUBJECT: return <Mail className="h-4 w-4" />
+      case ContentType.HEADLINE: return <Tag className="h-4 w-4" />
+      case ContentType.DESCRIPTION: return <FileText className="h-4 w-4" />
+      case ContentType.AD_COPY: return <Target className="h-4 w-4" />
+      case ContentType.PRODUCT_DESC: return <ShoppingBag className="h-4 w-4" />
+      case ContentType.LANDING_PAGE: return <Globe className="h-4 w-4" />
+      default: return <FileText className="h-4 w-4" />
     }
   }
 
@@ -107,7 +107,7 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
 
     // Check if content is approved for translation
     if (content.reviewState !== ReviewState.APPROVED) {
-      toast.warning('⚠️ Content Not Ready for Translation', {
+      toast.warning('Content Not Ready for Translation', {
         description: 'Content must be approved before translation. Please approve the content first.'
       })
       return
@@ -219,7 +219,7 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
     return (
       <Card>
         <CardContent className="text-center py-12">
-          <div className="text-6xl mb-4">⚠️</div>
+          <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-500" />
           <h3 className="text-lg font-semibold mb-2">Error loading content</h3>
           <p className="text-gray-600 mb-4">
             {error?.message || 'Content not found'}
@@ -349,7 +349,7 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="text-2xl">⚠️</div>
+              <AlertTriangle className="h-8 w-8 text-red-500" />
               <div>
                 <h4 className="font-medium text-amber-800">Translation Requires Approval</h4>
                 <p className="text-sm text-amber-700">
@@ -367,7 +367,7 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
         <Card className="border-green-200 bg-green-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="text-2xl">✅</div>
+              <CheckCircle className="h-8 w-8 text-green-500" />
               <div>
                 <h4 className="font-medium text-green-800">Content Approved</h4>
                 <p className="text-sm text-green-700">
