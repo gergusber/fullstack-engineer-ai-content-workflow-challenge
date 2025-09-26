@@ -65,6 +65,7 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
       @Query('reviewState') reviewState?: ReviewState,
       @Query('contentType') contentType?: ContentType,
       @Query('language') language?: string,
+      @Query('excludeTranslations') excludeTranslations?: string,
       @Query('page') page: number = 1,
       @Query('limit') limit: number = 10,
     ) {
@@ -74,6 +75,7 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
           reviewState,
           contentType,
           language,
+          excludeTranslations: excludeTranslations === 'true',
           page: Math.max(1, page),
           limit: Math.min(50, Math.max(1, limit)), // Cap at 50 items
         };

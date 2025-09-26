@@ -15,7 +15,7 @@ import { CampaignStatistics } from "./CampaignStatistics";
 import { CampaignEdit } from "./CampaignEdit";
 import { ContentType, ReviewState } from "@/types/content";
 import { CampaignStatus } from "@/types/campaign";
-import { useContentList } from "@/lib/hooks/api/content/queries";
+import { useContentList, useAllContentList } from "@/lib/hooks/api/content/queries";
 import { useUpdateCampaign } from "@/lib/hooks/api/campaigns/mutations";
 import { toast } from "sonner";
 import {
@@ -66,12 +66,18 @@ export function CampaignContentManager({
   const [selectedContentId, setSelectedContentId] = useState<string | null>(
     null
   );
+  const [showAllContent, setShowAllContent] = useState(true);
 
-  // Get content stats for workflow status
-  const { data: contentResponse } = useContentList({
-    campaignId,
-    limit: 1000,
-  });
+  // Get content stats for workflow status - use appropriate hook based on toggle
+  const { data: contentResponse } = showAllContent
+    ? useAllContentList({
+        campaignId,
+        limit: 1000,
+      })
+    : useContentList({
+        campaignId,
+        limit: 1000,
+      });
 
   // Campaign update mutation
   const { mutateAsync: updateCampaign, isPending: isUpdating } = useUpdateCampaign();
@@ -211,6 +217,29 @@ export function CampaignContentManager({
     setSelectedContentId(null);
   };
 
+  const getContentTypeLabel = (type: ContentType): string => {
+    switch (type) {
+      case ContentType.BLOG_POST:
+        return "Blog Post";
+      case ContentType.SOCIAL_POST:
+        return "Social Media Post";
+      case ContentType.EMAIL_SUBJECT:
+        return "Email Subject";
+      case ContentType.HEADLINE:
+        return "Headline";
+      case ContentType.DESCRIPTION:
+        return "Description";
+      case ContentType.AD_COPY:
+        return "Advertisement Copy";
+      case ContentType.PRODUCT_DESC:
+        return "Product Description";
+      case ContentType.LANDING_PAGE:
+        return "Landing Page";
+      default:
+        return type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    }
+  };
+
   const handleEditCampaign = async (data: any) => {
     try {
       await updateCampaign({
@@ -268,6 +297,15 @@ export function CampaignContentManager({
                     <span className="text-xs font-medium text-gray-700">
                       {contentStats.total} content pieces
                     </span>
+                    <span className="text-xs text-gray-500">•</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllContent(!showAllContent)}
+                      className="text-xs h-6 px-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                    >
+                      {showAllContent ? "Hide translations" : "Show all (including translations)"}
+                    </Button>
                   </>
                 )}
               </div>
@@ -472,18 +510,11 @@ export function CampaignContentManager({
                     onChange={(e) => setContentTypeFilter(e.target.value)}
                   >
                     <option value="all">All Types</option>
-                    {Object.values(ContentType).map((type) => {
-                      const template = contentTemplates.find(
-                        (t) => t.contentType === type
-                      );
-                      return (
-                        <option key={type} value={type}>
-                          {template
-                            ? `${template.icon} ${template.title}`
-                            : type}
-                        </option>
-                      );
-                    })}
+                    {Object.values(ContentType).map((type) => (
+                      <option key={type} value={type}>
+                        {getContentTypeLabel(type)}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -495,6 +526,7 @@ export function CampaignContentManager({
             campaignId={campaignId}
             searchTerm={searchTerm}
             contentTypeFilter={contentTypeFilter}
+            showAllContent={showAllContent}
             onViewContent={handleViewContent}
             onEditContent={handleEditContent}
           />

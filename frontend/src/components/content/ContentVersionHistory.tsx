@@ -32,7 +32,8 @@ import {
   Zap,
   Diff,
   ArrowRight,
-  X
+  X,
+  DiffIcon
 } from 'lucide-react'
 
 interface ContentVersionHistoryProps {
@@ -208,12 +209,22 @@ export function ContentVersionHistory({
   }
 
   const getItemContent = (item: TimelineItem) => {
+    const formatContent = (content: any): string => {
+      if (typeof content === 'string') {
+        return content
+      }
+      if (typeof content === 'object' && content !== null) {
+        return JSON.stringify(content, null, 2)
+      }
+      return 'No content'
+    }
+
     if (item.type === 'version' && item.data) {
       const version = item.data as ContentVersion
       return {
         title: version.title || 'No title',
         description: version.description || 'No description',
-        content: version.content || 'No content'
+        content: formatContent(version.content)
       }
     }
 
@@ -222,7 +233,7 @@ export function ContentVersionHistory({
       return {
         title: draft.generatedTitle || 'No title',
         description: draft.generatedDesc || 'No description',
-        content: draft.generatedContent || 'No content'
+        content: formatContent(draft.generatedContent)
       }
     }
 
@@ -231,7 +242,7 @@ export function ContentVersionHistory({
       return {
         title: edit.title || 'No title',
         description: edit.description || 'No description',
-        content: edit.content || 'No content'
+        content: formatContent(edit.content)
       }
     }
 
@@ -624,7 +635,7 @@ export function ContentVersionHistory({
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <Compare className="h-5 w-5" />
+                  <DiffIcon className="h-5 w-5" />
                   Version Comparison
                 </CardTitle>
                 <p className="text-sm text-gray-600">

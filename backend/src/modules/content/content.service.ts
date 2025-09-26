@@ -408,6 +408,11 @@ export class ContentService {
         { search: `%${filters.search}%` }
       );
     }
+
+    // Exclude translated content pieces (quick fix for translation architecture)
+    if (filters.excludeTranslations) {
+      queryBuilder.andWhere("content.translationOf IS NULL");
+    }
   }
   private applyContentSorting(
     queryBuilder: SelectQueryBuilder<ContentPiece>,

@@ -122,32 +122,32 @@ function TranslationDetailModal({ translationId, contentId, isOpen, onClose }: T
           </div>
 
           {/* Translation Metadata */}
-          {(translation.culturalNotes || translation.confidenceScore) && (
+          {(translation.translatedContent?.culturalNotes || translation.qualityScore) && (
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="text-sm">Translation Metadata</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {translation.confidenceScore && (
+                {translation.qualityScore && (
                   <div>
-                    <Label className="text-xs text-gray-500">Confidence Score</Label>
+                    <Label className="text-xs text-gray-500">Quality Score</Label>
                     <div className="flex items-center gap-2">
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-green-500 h-2 rounded-full"
-                          style={{width: `${(translation.confidenceScore || 0) * 100}%`}}
+                          style={{width: `${(translation.qualityScore || 0) * 100}%`}}
                         ></div>
                       </div>
                       <span className="text-sm font-medium">
-                        {((translation.confidenceScore || 0) * 100).toFixed(0)}%
+                        {((translation.qualityScore || 0) * 100).toFixed(0)}%
                       </span>
                     </div>
                   </div>
                 )}
-                {translation.culturalNotes && (
+                {translation.translatedContent?.culturalNotes && (
                   <div>
                     <Label className="text-xs text-gray-500">Cultural Notes</Label>
-                    <p className="text-sm">{translation.culturalNotes}</p>
+                    <p className="text-sm">{translation.translatedContent.culturalNotes}</p>
                   </div>
                 )}
               </CardContent>
@@ -536,6 +536,34 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
         </Card>
       )}
 
+      {/* Translation Info for translated content */}
+      {content.translationOf && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Languages className="h-8 w-8 text-blue-500" />
+                <div>
+                  <h4 className="font-medium text-blue-800">This is a Translation</h4>
+                  <p className="text-sm text-blue-700">
+                    This content is a translation from {getLanguageLabel(content.sourceLanguage)} to {getLanguageLabel(content.targetLanguage)}.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = `/content/${content.translationOf}`}
+                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+              >
+                <Globe className="h-4 w-4 mr-2" />
+                View Original Content
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tab Navigation */}
       <Card>
         <CardContent className="p-0">
@@ -798,7 +826,7 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
                     onChange={(e) => setContext(e.target.value)}
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Example: "Professional fashion content for Spanish market, maintain professional tone while adapting cultural references"
+                    Example: &ldquo;Professional fashion content for Spanish market, maintain professional tone while adapting cultural references&rdquo;
                   </p>
                 </div>
 

@@ -76,6 +76,9 @@ export interface ContentPiece {
 }
 
 export interface VersionHistoryEntry {
+  title: string;
+  description: string;
+  content: string;
   version: number;
   text: string;
   editedBy: string;
@@ -162,6 +165,7 @@ export interface Translation {
 
 // Content Version interface
 export interface ContentVersion {
+  content: string;
   id: string;
   contentPieceId: string;
   versionNumber: number;
@@ -248,6 +252,7 @@ export interface ContentFiltersDto {
   limit?: number;
   sortBy?: 'createdAt' | 'updatedAt' | 'title' | 'priority' | 'reviewState';
   sortOrder?: 'ASC' | 'DESC';
+  excludeTranslations?: boolean; // Filter out content pieces that are translations
 }
 
 export interface UpdateReviewStateDto {

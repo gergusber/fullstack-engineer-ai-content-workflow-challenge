@@ -5,6 +5,7 @@ import {
   IsNumber,
   Min,
   IsUUID,
+  IsBoolean,
 } from "class-validator";
 import {
   ReviewState,
@@ -67,4 +68,8 @@ export class ContentFiltersDto {
   @IsOptional()
   @IsEnum(["ASC", "DESC"])
   sortOrder?: "ASC" | "DESC" = "DESC";
+
+  @IsOptional()
+  @IsBoolean()
+  excludeTranslations?: boolean; // Filter out content pieces that are translations (have translationOf field)
 }

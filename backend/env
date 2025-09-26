@@ -1,0 +1,20 @@
+# Database Configuration
+DATABASE_URL=postgresql://postgres:password@postgres:5432/ai_content_workflow
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-4
+OPENAI_MAX_TOKENS=4000
+
+# Claude Configuration
+CLAUDE_API_KEY=your_claude_api_key_here
+CLAUDE_MODEL=claude-3-sonnet-20240229
+CLAUDE_MAX_TOKENS=4000
+
+# AI Translation Configuration
+AI_TRANSLATION_TIMEOUT=30000
+AI_MAX_RETRIES=3
+AI_DEFAULT_TEMPERATURE=0.3
+
+# Server Configuration
+PORT=3001

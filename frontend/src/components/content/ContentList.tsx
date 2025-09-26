@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { useContentList } from '@/lib/hooks/api/content/queries'
+import { useContentList, useAllContentList } from '@/lib/hooks/api/content/queries'
 import { ContentType, ReviewState, Priority } from '@/types/content'
 import { Loader2, FileText, MessageSquare, Mail, Tag, Target, ShoppingBag, Globe, AlertTriangle, Eye, Edit, Languages } from 'lucide-react'
 
@@ -12,21 +12,30 @@ interface ContentListProps {
   campaignId: string
   searchTerm: string
   contentTypeFilter: string
+  showAllContent?: boolean
   onViewContent?: (contentId: string) => void
   onEditContent?: (contentId: string) => void
 }
 
-export function ContentList({ campaignId, searchTerm, contentTypeFilter, onViewContent, onEditContent }: ContentListProps) {
-  // Fetch content data using our API hook
-  const { data: contentResponse, isLoading, error } = useContentList({
+export function ContentList({ campaignId, searchTerm, contentTypeFilter, showAllContent = false, onViewContent, onEditContent }: ContentListProps) {
+  // Fetch content data using both hooks (to avoid conditional hook calls)
+  const queryParams = {
     campaignId,
     search: searchTerm || undefined,
     contentType: contentTypeFilter !== 'all' ? contentTypeFilter as ContentType : undefined,
     page: 1,
     limit: 50, // Reasonable limit for UI
-  })
+  }
 
-  const contentData = contentResponse?.data || []
+  const { data: contentResponse, isLoading, error } = useContentList(queryParams)
+  const { data: allContentResponse, isLoading: isLoadingAll, error: errorAll } = useAllContentList(queryParams)
+
+  // Select the appropriate response based on showAllContent
+  const selectedResponse = showAllContent ? allContentResponse : contentResponse
+  const selectedLoading = showAllContent ? isLoadingAll : isLoading
+  const selectedError = showAllContent ? errorAll : error
+
+  const contentData = selectedResponse?.data || []
 
   // Additional client-side filtering if needed
   const filteredContent = contentData.filter((content) => {
@@ -90,7 +99,7 @@ export function ContentList({ campaignId, searchTerm, contentTypeFilter, onViewC
   }
 
   // Loading state
-  if (isLoading) {
+  if (selectedLoading) {
     return (
       <Card>
         <CardContent className="text-center py-12">
@@ -103,7 +112,7 @@ export function ContentList({ campaignId, searchTerm, contentTypeFilter, onViewC
   }
 
   // Error state
-  if (error) {
+  if (selectedError) {
     return (
       <Card>
         <CardContent className="text-center py-12">
@@ -112,7 +121,7 @@ export function ContentList({ campaignId, searchTerm, contentTypeFilter, onViewC
           <p className="text-gray-600 mb-4">
             There was an error loading the content pieces. Please try again.
           </p>
-          <p className="text-sm text-red-600">{error.message}</p>
+          <p className="text-sm text-red-600">{selectedError instanceof Error ? selectedError.message : 'Unknown error'}</p>
         </CardContent>
       </Card>
     )
@@ -138,14 +147,22 @@ export function ContentList({ campaignId, searchTerm, contentTypeFilter, onViewC
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Showing {filteredContent.length} content piece{filteredContent.length !== 1 ? 's' : ''}
-          {contentResponse?.pagination && (
-            <span className="ml-2 text-xs text-gray-500">
-              (Total: {contentResponse.pagination.total})
-            </span>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-gray-600">
+            Showing {filteredContent.length} content piece{filteredContent.length !== 1 ? 's' : ''}
+            {contentResponse?.pagination && (
+              <span className="ml-2 text-xs text-gray-500">
+                (Total: {contentResponse.pagination.total})
+              </span>
+            )}
+          </p>
+          {showAllContent && (
+            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+              <Languages className="h-3 w-3 mr-1" />
+              Including translations
+            </Badge>
           )}
-        </p>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -156,6 +173,12 @@ export function ContentList({ campaignId, searchTerm, contentTypeFilter, onViewC
                 <CardTitle className="text-lg leading-tight flex items-center gap-2">
                   {getContentTypeIcon(content.contentType)}
                   {content.title}
+                  {content.translationOf && (
+                    <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                      <Languages className="h-3 w-3 mr-1" />
+                      Translation
+                    </Badge>
+                  )}
                 </CardTitle>
                 <Badge className={getPriorityColor(content.priority)} variant="secondary">
                   {content.priority}
