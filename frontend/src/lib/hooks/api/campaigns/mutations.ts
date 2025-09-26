@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CampaignsService } from '@/lib/services/campaigns.service'
 import { queryKeys, getInvalidationKeys } from '@/lib/api/query-keys'
 import { CreateCampaignDto } from '@/lib/api/types'
+import { CampaignStatus } from '@/types/campaign'
 import { toast } from 'sonner'
 
 export const useCreateCampaign = () => {
@@ -59,6 +60,40 @@ export const useDeleteCampaign = () => {
     },
     onError: (error: any) => {
       toast.error(`Failed to delete campaign: ${error.message}`)
+    }
+  })
+}
+
+export const useUpdateCampaignStatus = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, status, silent = false }: { id: string; status: CampaignStatus; silent?: boolean }) =>
+      CampaignsService.updateCampaignStatus(id, status),
+    onSuccess: (result, variables) => {
+      // Update specific campaign cache
+      queryClient.setQueryData(queryKeys.campaigns.detail(variables.id), result)
+
+      // Invalidate related queries
+      getInvalidationKeys.forCampaign(variables.id).forEach(key => {
+        queryClient.invalidateQueries({ queryKey: key })
+      })
+
+      if (!variables.silent) {
+        const statusLabels = {
+          [CampaignStatus.DRAFT]: 'Draft',
+          [CampaignStatus.ACTIVE]: 'Active',
+          [CampaignStatus.PAUSED]: 'Paused',
+          [CampaignStatus.COMPLETED]: 'Completed',
+          [CampaignStatus.ARCHIVED]: 'Archived'
+        }
+        toast.success(`Campaign status updated to ${statusLabels[variables.status]}`)
+      }
+    },
+    onError: (error: any, variables) => {
+      if (!variables.silent) {
+        toast.error(`Failed to update campaign status: ${error.message}`)
+      }
     }
   })
 }

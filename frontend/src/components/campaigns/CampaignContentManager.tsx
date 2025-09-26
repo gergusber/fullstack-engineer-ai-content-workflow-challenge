@@ -13,7 +13,9 @@ import { ContentDetail } from '../content/ContentDetail'
 import { TranslationDashboard } from '../content/TranslationDashboard'
 import { CampaignStatistics } from './CampaignStatistics'
 import { CampaignEdit } from './CampaignEdit'
-import { ContentType, Priority } from '@/types/content'
+import { ContentType, Priority, ReviewState } from '@/types/content'
+import { CampaignStatus } from '@/types/campaign'
+import { useContentList } from '@/lib/hooks/api/content/queries'
 import { toast } from 'sonner'
 
 interface CampaignContentManagerProps {
@@ -36,6 +38,55 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
   const [contentTypeFilter, setContentTypeFilter] = useState<string>('all')
   const [quickTemplate, setQuickTemplate] = useState<QuickContentTemplate | null>(null)
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null)
+
+  // Get content stats for workflow status
+  const { data: contentResponse } = useContentList({
+    campaignId,
+    limit: 1000,
+  })
+
+  const allContent = contentResponse?.data || []
+  const contentStats = {
+    total: allContent.length,
+    approved: allContent.filter(c => c.reviewState === ReviewState.APPROVED).length,
+    pending: allContent.filter(c =>
+      c.reviewState === ReviewState.PENDING_REVIEW ||
+      c.reviewState === ReviewState.REVIEWED
+    ).length,
+    draft: allContent.filter(c => c.reviewState === ReviewState.DRAFT).length,
+    rejected: allContent.filter(c => c.reviewState === ReviewState.REJECTED).length,
+    aiSuggested: allContent.filter(c => c.reviewState === ReviewState.AI_SUGGESTED).length,
+  }
+
+  const getStatusBadgeColor = (status: CampaignStatus) => {
+    switch (status) {
+      case CampaignStatus.DRAFT: return 'bg-gray-100 text-gray-800'
+      case CampaignStatus.ACTIVE: return 'bg-green-100 text-green-800'
+      case CampaignStatus.PAUSED: return 'bg-yellow-100 text-yellow-800'
+      case CampaignStatus.COMPLETED: return 'bg-blue-100 text-blue-800'
+      case CampaignStatus.ARCHIVED: return 'bg-purple-100 text-purple-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getWorkflowMessage = () => {
+    if (contentStats.total === 0) {
+      return "No content yet - create content to start the workflow"
+    }
+    if (contentStats.approved === contentStats.total && contentStats.total > 0) {
+      return "🎉 All content approved! Campaign ready for completion."
+    }
+    if (contentStats.approved > 0 && (contentStats.pending > 0 || contentStats.aiSuggested > 0)) {
+      return `✨ ${contentStats.approved} approved, ${contentStats.pending + contentStats.aiSuggested} in review`
+    }
+    if (contentStats.pending > 0 || contentStats.aiSuggested > 0) {
+      return `⏳ ${contentStats.pending + contentStats.aiSuggested} content pieces awaiting review`
+    }
+    if (contentStats.draft > 0 || contentStats.rejected > 0) {
+      return `📝 ${contentStats.draft + contentStats.rejected} content pieces need work`
+    }
+    return "Ready for content creation"
+  }
 
   // Quick content templates
   const contentTemplates: QuickContentTemplate[] = [
@@ -128,6 +179,23 @@ export function CampaignContentManager({ campaignId, campaign }: CampaignContent
               <p className="text-sm text-gray-600 mt-1">
                 Create, manage, and organize content for {campaign.name}
               </p>
+              <div className="flex items-center gap-3 mt-3">
+                <Badge className={getStatusBadgeColor(campaign.status)} variant="secondary">
+                  {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                </Badge>
+                <span className="text-xs text-gray-500">•</span>
+                <span className="text-xs text-gray-600">
+                  {getWorkflowMessage()}
+                </span>
+                {contentStats.total > 0 && (
+                  <>
+                    <span className="text-xs text-gray-500">•</span>
+                    <span className="text-xs font-medium text-gray-700">
+                      {contentStats.total} content pieces
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
             <Button
               variant="ghost"

@@ -9,10 +9,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { useContent, useContentTranslations } from '@/lib/hooks/api/content/queries'
 import {
   useTranslateContent,
-  useApproveContent,
-  useRejectContent,
   useSubmitForReview
 } from '@/lib/hooks/api/content/mutations'
+import { useContentWorkflow } from '@/lib/hooks/useContentWorkflow'
 import { ContentType, ReviewState, Priority, TranslateContentDto } from '@/types/content'
 import { Loader2, ArrowLeft, Globe, Copy, Edit, CheckCircle, Check, X, Send, Languages } from 'lucide-react'
 import { ContentEdit } from './ContentEdit'
@@ -39,9 +38,15 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
   const { data: contentResponse, isLoading, error } = useContent(contentId)
   const { data: translationsResponse, isLoading: translationsLoading } = useContentTranslations(contentId)
   const { mutateAsync: translateContent, isPending: isTranslating } = useTranslateContent()
-  const { mutateAsync: approveContent, isPending: isApproving } = useApproveContent()
-  const { mutateAsync: rejectContent, isPending: isRejecting } = useRejectContent()
   const { mutateAsync: submitForReview, isPending: isSubmitting } = useSubmitForReview()
+
+  // Use workflow hooks for approve/reject with campaign status automation
+  const {
+    approveContentWithWorkflow: approveContent,
+    rejectContentWithWorkflow: rejectContent,
+    isApprovingWithWorkflow: isApproving,
+    isRejectingWithWorkflow: isRejecting
+  } = useContentWorkflow({ autoUpdateCampaignStatus: true, showWorkflowMessages: true })
 
   const content = contentResponse?.data
   const translations = translationsResponse?.data || []

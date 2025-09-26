@@ -1,5 +1,6 @@
 import { apiClient, ApiResponse } from '@/lib/api/client'
 import { Campaign, CampaignStats, CreateCampaignDto, CampaignFilters } from '@/lib/api/types'
+import { CampaignStatus } from '@/types/campaign'
 
 export class CampaignsService {
   private static readonly BASE_URL = '/api/campaigns'
@@ -37,6 +38,11 @@ export class CampaignsService {
 
   static async deleteCampaign(id: string): Promise<ApiResponse<void>> {
     const { data } = await apiClient.delete(`${this.BASE_URL}/${id}`)
+    return data
+  }
+
+  static async updateCampaignStatus(id: string, status: CampaignStatus): Promise<ApiResponse<Campaign>> {
+    const { data } = await apiClient.patch(`${this.BASE_URL}/${id}/status`, { status })
     return data
   }
 }
