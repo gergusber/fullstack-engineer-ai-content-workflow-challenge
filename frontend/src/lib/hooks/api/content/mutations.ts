@@ -140,14 +140,18 @@ export const useGenerateAIContent = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, generateDto }: { id: string; generateDto: GenerateAIContentDto }) =>
-      ContentService.generateAIContent(id, generateDto),
-    onSuccess: (_, variables) => {
+    mutationFn: ({ id, generateDto }: { id: string; generateDto: GenerateAIContentDto }) => {
+      console.log('Generating AI content for:', id, 'with:', generateDto)
+      return ContentService.generateAIContent(id, generateDto)
+    },
+    onSuccess: (result, variables) => {
+      console.log('AI generation successful:', result)
       queryClient.invalidateQueries({ queryKey: queryKeys.content.aiDrafts(variables.id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.content.detail(variables.id) })
       toast.success('AI content generated successfully')
     },
     onError: (error: Error) => {
+      console.error('AI generation failed:', error)
       toast.error(`Failed to generate AI content: ${error.message}`)
     }
   })

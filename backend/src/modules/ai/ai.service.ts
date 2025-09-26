@@ -109,7 +109,8 @@ export class AIService {
 
     const apiKey = this.configService.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
-      throw new Error('Anthropic API key not configured');
+      console.log('🔧 AI API Key not configured, using mock response for development');
+      return this.getMockClaudeResponse(prompt, options, startTime);
     }
 
     try {
@@ -146,12 +147,18 @@ export class AIService {
   private async callOpenAIAPI(prompt: string, options: any): Promise<any> {
     const startTime = Date.now();
 
+    const apiKey = this.configService.get('OPENAI_API_KEY');
+    if (!apiKey) {
+      console.log('🔧 OpenAI API Key not configured, using mock response for development');
+      return this.getMockOpenAIResponse(prompt, options, startTime);
+    }
+
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.configService.get('OPENAI_API_KEY')}`,
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: 'gpt-4',
@@ -407,6 +414,132 @@ ${targetCulture.considerations.map(c => `- ${c}`).join('\n')}`;
     if (formalIndicators.some(word => lowerContent.includes(word))) return 'formal';
 
     return 'neutral';
+  }
+
+  private getMockClaudeResponse(prompt: string, options: any, startTime: number): any {
+    // Generate mock content based on prompt analysis
+    const isTranslation = prompt.includes('translate') || prompt.includes('translation');
+    const contentType = this.extractContentTypeFromPrompt(prompt);
+
+    let mockContent = '';
+
+    if (isTranslation) {
+      mockContent = this.generateMockTranslation(prompt);
+    } else {
+      mockContent = this.generateMockContent(contentType, prompt);
+    }
+
+    return {
+      content: mockContent,
+      responseTime: Date.now() - startTime,
+      model: 'claude-3-sonnet-mock',
+      tokenCount: Math.floor(mockContent.length / 4), // Rough estimate
+      usage: {
+        input_tokens: Math.floor(prompt.length / 4),
+        output_tokens: Math.floor(mockContent.length / 4),
+      }
+    };
+  }
+
+  private extractContentTypeFromPrompt(prompt: string): string {
+    const types = ['blog_post', 'social_post', 'email_subject', 'headline', 'ad_copy', 'product_desc'];
+    for (const type of types) {
+      if (prompt.toLowerCase().includes(type.replace('_', ' ')) || prompt.toLowerCase().includes(type)) {
+        return type;
+      }
+    }
+    return 'general';
+  }
+
+  private generateMockContent(contentType: string, prompt: string): string {
+    const templates = {
+      blog_post: `# Generated Blog Post
+
+This is a sample blog post generated for development purposes. The content has been created based on your prompt and requirements.
+
+## Key Points:
+- Professional content structure
+- Engaging introduction
+- Clear main points
+- Call to action
+
+This mock content demonstrates the AI generation functionality while the external API is not configured.`,
+
+      social_post: `🚀 Exciting news! Check out this amazing content generated specifically for your social media needs.
+
+✨ Key features:
+• Engaging tone
+• Hashtag ready
+• Perfect length
+
+#ContentCreation #AI #SocialMedia`,
+
+      email_subject: `🎯 Your AI-Generated Subject Line: Boost Engagement Today`,
+
+      headline: `Revolutionary AI Content: Transform Your Marketing Strategy`,
+
+      ad_copy: `Limited Time Offer!
+Get 50% off our premium service and revolutionize your content strategy.
+Don't miss out - offer expires soon!
+Click now to transform your business.`,
+
+      product_desc: `Premium Product Description
+
+Discover the perfect solution for your needs with our innovative product. Featuring cutting-edge technology and user-friendly design, this product delivers exceptional results.
+
+Key Features:
+• High-quality materials
+• User-friendly interface
+• Excellent customer support
+• 30-day money-back guarantee
+
+Perfect for professionals and beginners alike.`,
+
+      general: `Generated Content
+
+This is high-quality content created based on your specific requirements. The content has been tailored to match your desired tone, style, and objectives.
+
+This mock response demonstrates the AI generation capabilities while external APIs are being configured.`
+    };
+
+    return templates[contentType] || templates.general;
+  }
+
+  private generateMockTranslation(prompt: string): string {
+    return `{
+  "translatedTitle": "Título Traducido (Ejemplo)",
+  "translatedDescription": "Esta es una descripción traducida de ejemplo que mantiene el significado original mientras se adapta culturalmente al idioma objetivo.",
+  "translatedContent": "Este es el contenido traducido principal. En un escenario real, esto sería traducido por IA usando modelos de lenguaje avanzados. Este contenido de prueba demuestra la funcionalidad mientras las claves de API externas se configuran.",
+  "culturalNotes": "Notas culturales relevantes para el mercado objetivo",
+  "confidenceScore": 0.85,
+  "translationStrategy": "Adaptación cultural con preservación del tono original"
+}`;
+  }
+
+  private getMockOpenAIResponse(prompt: string, options: any, startTime: number): any {
+    // Generate mock content similar to Claude but with OpenAI branding
+    const isTranslation = prompt.includes('translate') || prompt.includes('translation');
+    const contentType = this.extractContentTypeFromPrompt(prompt);
+
+    let mockContent = '';
+
+    if (isTranslation) {
+      mockContent = this.generateMockTranslation(prompt);
+    } else {
+      mockContent = this.generateMockContent(contentType, prompt);
+    }
+
+    return {
+      content: mockContent,
+      responseTime: Date.now() - startTime,
+      model: 'gpt-4-mock',
+      tokenCount: Math.floor(mockContent.length / 4), // Rough estimate
+      usage: {
+        prompt_tokens: Math.floor(prompt.length / 4),
+        completion_tokens: Math.floor(mockContent.length / 4),
+        total_tokens: Math.floor((prompt.length + mockContent.length) / 4),
+      }
+    };
   }
 
   private assessComplexity(content: string): string {

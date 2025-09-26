@@ -16,6 +16,7 @@ import { CampaignEdit } from "./CampaignEdit";
 import { ContentType, ReviewState } from "@/types/content";
 import { CampaignStatus } from "@/types/campaign";
 import { useContentList } from "@/lib/hooks/api/content/queries";
+import { useUpdateCampaign } from "@/lib/hooks/api/campaigns/mutations";
 import { toast } from "sonner";
 import {
   FileText,
@@ -71,6 +72,9 @@ export function CampaignContentManager({
     campaignId,
     limit: 1000,
   });
+
+  // Campaign update mutation
+  const { mutateAsync: updateCampaign, isPending: isUpdating } = useUpdateCampaign();
 
   const allContent = contentResponse?.data || [];
   const contentStats = {
@@ -207,14 +211,29 @@ export function CampaignContentManager({
     setSelectedContentId(null);
   };
 
-  const handleEditCampaign = (data: any) => {
-    // TODO: Implement campaign update API call
-    console.log("Update campaign:", data);
-    // For now, just show success and go back to list
-    toast.success("Campaign updated successfully! 🎉", {
-      description: "Your campaign changes have been saved.",
-    });
-    setCurrentView("list");
+  const handleEditCampaign = async (data: any) => {
+    try {
+      await updateCampaign({
+        id: campaign.id,
+        data: {
+          name: data.name,
+          description: data.description,
+          targetMarkets: data.targetMarkets,
+          tags: data.tags,
+          status: data.status,
+        },
+      });
+
+      toast.success("Campaign updated successfully! 🎉", {
+        description: "Your campaign changes have been saved.",
+      });
+      setCurrentView("list");
+    } catch (error) {
+      console.error("Failed to update campaign:", error);
+      toast.error("Failed to update campaign", {
+        description: "Please try again or check your connection.",
+      });
+    }
   };
 
   return (
@@ -534,6 +553,7 @@ export function CampaignContentManager({
           campaign={campaign}
           onSave={handleEditCampaign}
           onCancel={() => setCurrentView("list")}
+          isSubmitting={isUpdating}
         />
       )}
     </div>

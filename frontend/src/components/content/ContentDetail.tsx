@@ -9,15 +9,169 @@ import { Textarea } from '@/components/ui/textarea'
 import { useContent, useContentTranslations } from '@/lib/hooks/api/content/queries'
 import {
   useTranslateContent,
-  useSubmitForReview
+  useSubmitForReview,
+  useUpdateContent
 } from '@/lib/hooks/api/content/mutations'
 import { useContentWorkflow } from '@/lib/hooks/useContentWorkflow'
 import { ContentType, ReviewState, Priority, TranslateContentDto } from '@/types/content'
-import { Loader2, ArrowLeft, Globe, Copy, Edit, CheckCircle, Check, X, Send, Languages, FileText, MessageSquare, Mail, Tag, Target, ShoppingBag, AlertTriangle } from 'lucide-react'
+import { Loader2, ArrowLeft, Globe, Copy, Edit, CheckCircle, Check, X, Send, Languages, FileText, MessageSquare, Mail, Tag, Target, ShoppingBag, AlertTriangle, History } from 'lucide-react'
 import { ContentEdit } from './ContentEdit'
 import { TranslationOverview } from './TranslationOverview'
+import { ContentVersionHistory } from './ContentVersionHistory'
 import { RejectionModal } from '@/components/ui/rejection-modal'
 import { toast } from 'sonner'
+
+// Translation Detail Modal Component
+interface TranslationDetailModalProps {
+  translationId: string
+  contentId: string
+  isOpen: boolean
+  onClose: () => void
+}
+
+function TranslationDetailModal({ translationId, contentId, isOpen, onClose }: TranslationDetailModalProps) {
+  const { data: contentResponse } = useContent(contentId)
+  const { data: translationsResponse } = useContentTranslations(contentId)
+
+  const translations = translationsResponse?.data || []
+  const translation = translations.find(t => t.id === translationId)
+  const content = contentResponse?.data
+
+  if (!isOpen || !translation) return null
+
+  const getLanguageLabel = (code: string) => {
+    const languageMap: Record<string, string> = {
+      'en': '🇺🇸 English',
+      'es': '🇪🇸 Spanish',
+      'fr': '🇫🇷 French',
+      'de': '🇩🇪 German',
+      'pt': '🇵🇹 Portuguese',
+      'it': '🇮🇹 Italian',
+      'zh': '🇨🇳 Chinese',
+      'ja': '🇯🇵 Japanese',
+    }
+    return languageMap[code] || code
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <Languages className="h-5 w-5" />
+              <h2 className="text-xl font-semibold">Translation Details</h2>
+            </div>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Translation Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Original Content</CardTitle>
+                <div className="text-xs text-gray-500">
+                  {getLanguageLabel(translation.sourceLanguage)}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-xs text-gray-500">Title</Label>
+                  <p className="text-sm font-medium">{content?.title}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Description</Label>
+                  <p className="text-sm">{content?.description}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Content</Label>
+                  <div className="text-sm bg-gray-50 p-3 rounded border max-h-32 overflow-y-auto">
+                    {content?.finalText || 'No content available'}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Translated Content</CardTitle>
+                <div className="text-xs text-gray-500">
+                  {getLanguageLabel(translation.targetLanguage)}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-xs text-gray-500">Title</Label>
+                  <p className="text-sm font-medium">{translation.translatedTitle || 'Not translated'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Description</Label>
+                  <p className="text-sm">{translation.translatedDesc || 'Not translated'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Content</Label>
+                  <div className="text-sm bg-gray-50 p-3 rounded border max-h-32 overflow-y-auto">
+                    {translation.translatedContent?.body || 'No translated content available'}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Translation Metadata */}
+          {(translation.culturalNotes || translation.confidenceScore) && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-sm">Translation Metadata</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {translation.confidenceScore && (
+                  <div>
+                    <Label className="text-xs text-gray-500">Confidence Score</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-green-500 h-2 rounded-full"
+                          style={{width: `${(translation.confidenceScore || 0) * 100}%`}}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium">
+                        {((translation.confidenceScore || 0) * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {translation.culturalNotes && (
+                  <div>
+                    <Label className="text-xs text-gray-500">Cultural Notes</Label>
+                    <p className="text-sm">{translation.culturalNotes}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              navigator.clipboard.writeText(translation.translatedContent?.body || '')
+              toast.success('Translation copied to clipboard')
+            }}>
+              <Copy className="h-4 w-4 mr-2" />
+              Copy Translation
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 interface ContentDetailProps {
   contentId: string
@@ -31,14 +185,17 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
   const [context, setContext] = useState('')
   const [translationType, setTranslationType] = useState<'literal' | 'localized' | 'culturally_adapted'>('localized')
   const [isEditing, setIsEditing] = useState(false)
-  const [activeTab, setActiveTab] = useState<'details' | 'translations'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'translations' | 'history'>('details')
   const [showRejectionModal, setShowRejectionModal] = useState(false)
+  const [selectedTranslationId, setSelectedTranslationId] = useState<string | null>(null)
+  const [showTranslationDetail, setShowTranslationDetail] = useState(false)
 
   // Fetch content data
   const { data: contentResponse, isLoading, error } = useContent(contentId)
   const { data: translationsResponse, isLoading: translationsLoading } = useContentTranslations(contentId)
   const { mutateAsync: translateContent, isPending: isTranslating } = useTranslateContent()
   const { mutateAsync: submitForReview, isPending: isSubmitting } = useSubmitForReview()
+  const { mutateAsync: updateContent, isPending: isUpdatingContent } = useUpdateContent()
 
   // Use workflow hooks for approve/reject with campaign status automation
   const {
@@ -407,6 +564,18 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
               <Languages className="h-4 w-4 mr-2" />
               Translations ({translations.length})
             </Button>
+            <Button
+              variant="ghost"
+              className={`flex-1 rounded-none border-b-2 ${
+                activeTab === 'history'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-transparent hover:bg-gray-50'
+              }`}
+              onClick={() => setActiveTab('history')}
+            >
+              <History className="h-4 w-4 mr-2" />
+              Version History
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -673,8 +842,66 @@ export function ContentDetail({ contentId, onBack }: ContentDetailProps) {
         <TranslationOverview
           contentId={contentId}
           onViewTranslation={(translationId) => {
-            // TODO: Implement translation detail view
-            console.log('View translation:', translationId)
+            setSelectedTranslationId(translationId)
+            setShowTranslationDetail(true)
+          }}
+        />
+      )}
+
+      {/* Version History Tab */}
+      {activeTab === 'history' && content && (
+        <ContentVersionHistory
+          contentPiece={content}
+          onCompareVersions={(version1, version2) => {
+            console.log('Comparing versions:', version1, version2)
+            toast.success('Version comparison initialized', {
+              description: 'Check the comparison view in the history tab'
+            })
+          }}
+          onRestoreVersion={async (versionId) => {
+            if (!content) return
+
+            try {
+              // Find the version data to restore from
+              const versionToRestore = content.contentVersions?.find(v => v.id === versionId)
+
+              if (!versionToRestore) {
+                toast.error('Version not found')
+                return
+              }
+
+              // Update the content with the version data
+              await updateContent({
+                id: contentId,
+                data: {
+                  title: versionToRestore.title || content.title,
+                  description: versionToRestore.description || content.description,
+                  finalText: versionToRestore.content || content.finalText
+                }
+              })
+
+              toast.success('Version restored successfully!', {
+                description: `Restored to version ${versionToRestore.versionNumber}`
+              })
+            } catch (error) {
+              console.error('Version restoration error:', error)
+              toast.error('Failed to restore version', {
+                description: 'Please try again or check your connection.'
+              })
+            }
+          }}
+        />
+      )}
+
+      {/* Translation Detail Modal */}
+      {showTranslationDetail && selectedTranslationId && (
+        <TranslationDetailModal
+          translationId={selectedTranslationId}
+          contentId={contentId}
+          isOpen={showTranslationDetail}
+          onClose={() => {
+            setShowTranslationDetail(false)
+            setSelectedTranslationId(null)
           }}
         />
       )}

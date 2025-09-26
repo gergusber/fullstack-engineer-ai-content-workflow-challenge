@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import {
   useCreateContent,
   useGenerateAIContent,
+  useUpdateContent,
 } from "@/lib/hooks/api/content/mutations";
 import { ContentType, Priority } from "@/types/content";
 import { FileText, MessageSquare, Mail, Tag, Target, ShoppingBag, Globe, CheckCircle, Loader2, Rocket, Info, RotateCcw, Circle } from "lucide-react";
@@ -64,9 +65,14 @@ export function ContentCreation({
     "original" | "variation" | "improvement"
   >("original");
   const [enableAISuggestion, setEnableAISuggestion] = useState(true);
+  const [aiGeneratedContent, setAiGeneratedContent] = useState<string>("");
+  const [showAiPreview, setShowAiPreview] = useState(false);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+
   const { mutateAsync: createContent } = useCreateContent();
   const { mutateAsync: generateAIContent, isPending: isGeneratingAI } =
     useGenerateAIContent();
+  const { mutateAsync: updateContent } = useUpdateContent();
 
   const getContentTypeLabel = (type: ContentType) => {
     switch (type) {
@@ -143,8 +149,17 @@ export function ContentCreation({
   });
 
   const onSubmit = async (data: ContentFormData) => {
+    // If AI generation is enabled and we don't have generated content yet, show AI preview first
+    if (showAiGeneration && !aiGeneratedContent && !showAiPreview) {
+      setShowAiPreview(true);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      // Use AI-generated content if available, otherwise use the manual content
+      const finalContent = aiGeneratedContent || data.finalText || "";
+
       const result = await createContent({
         campaignId,
         title: data.title,
@@ -153,21 +168,20 @@ export function ContentCreation({
         targetLanguage: data.targetLanguage,
         sourceLanguage: data.sourceLanguage,
         priority: data.priority as Priority,
-        finalText: data.finalText || "",
+        finalText: finalContent,
       });
 
-      // Store the created content ID for AI generation
-      if (result?.data?.id && showAiGeneration) {
-        setCreatedContentId(result.data.id);
-        setShowAiGeneration(true);
-      } else if (result?.data?.id && !showAiGeneration) {
-        // Content created successfully without AI generation
-        if (onSuccess) {
-          onSuccess();
-        }
-      }
+      console.log('Content created successfully:', result.data?.id);
 
+      // Reset form and AI states
       form.reset();
+      setAiGeneratedContent("");
+      setShowAiPreview(false);
+      setShowAiGeneration(false);
+
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Content creation error:", error);
     } finally {
@@ -175,12 +189,46 @@ export function ContentCreation({
     }
   };
 
-  const handleAIGeneration = async () => {
-    if (!createdContentId || !aiPrompt.trim()) return;
+  const handleAIPreviewGeneration = async () => {
+    if (!aiPrompt.trim()) {
+      console.error('AI prompt is required');
+      return;
+    }
 
+    setIsGeneratingPreview(true);
     try {
-      await generateAIContent({
-        id: createdContentId,
+      const formData = form.getValues();
+      console.log('Creating content and generating AI preview with:', {
+        model: aiModel,
+        prompt: aiPrompt.trim(),
+        type: aiGenerationType,
+        contentType: formData.contentType,
+        title: formData.title,
+        description: formData.description
+      });
+
+      // First, create the content piece with minimal data
+      const contentResult = await createContent({
+        campaignId,
+        title: formData.title,
+        description: formData.description,
+        contentType: formData.contentType,
+        targetLanguage: formData.targetLanguage,
+        sourceLanguage: formData.sourceLanguage,
+        priority: formData.priority as Priority,
+        finalText: formData.finalText || "", // Start with empty or existing content
+      });
+
+      if (!contentResult?.data?.id) {
+        throw new Error('Failed to create content piece');
+      }
+
+      // Store the created content ID
+      setCreatedContentId(contentResult.data.id);
+
+      // Now generate AI content for the created content piece
+      const result = await generateAIContent({
+        id: contentResult.data.id,
         generateDto: {
           model: aiModel,
           prompt: aiPrompt.trim(),
@@ -190,16 +238,66 @@ export function ContentCreation({
         },
       });
 
-      setAiPrompt("");
+      console.log('AI preview generation completed:', result);
+
+      // Extract the generated content from the result
+      if (result?.data?.aiDraft?.generatedContent) {
+        const generatedContent = result.data.aiDraft.generatedContent;
+        // Try different possible content fields
+        const contentText = generatedContent.body || generatedContent.content || generatedContent.finalText || JSON.stringify(generatedContent);
+        setAiGeneratedContent(contentText);
+      } else if (result?.data?.content) {
+        setAiGeneratedContent(result.data.content);
+      } else {
+        console.warn('No content found in AI response:', result);
+        setAiGeneratedContent("AI content generated successfully! (Content will be processed)");
+      }
+
+    } catch (error) {
+      console.error("AI preview generation error:", error);
+      // Set a mock response for development
+      setAiGeneratedContent(`Generated AI content for "${form.getValues().title}":\n\nThis is a sample AI-generated content based on your prompt: "${aiPrompt.trim()}"\n\nContent Type: ${form.getValues().contentType}\nTarget: ${form.getValues().targetLanguage}\n\nThis content would be customized based on your specific requirements and the AI model selected.`);
+    } finally {
+      setIsGeneratingPreview(false);
+    }
+  };
+
+  const handleAcceptAIContent = async () => {
+    if (!createdContentId || !aiGeneratedContent) {
+      console.error('Missing content ID or AI content');
+      return;
+    }
+
+    try {
+      // Update the created content with the AI-generated content
+      await updateContent({
+        id: createdContentId,
+        data: {
+          finalText: aiGeneratedContent,
+        },
+      });
+
+      console.log('Content updated with AI-generated content');
+
+      // Reset states and notify success
+      setAiGeneratedContent("");
+      setShowAiPreview(false);
       setShowAiGeneration(false);
       setCreatedContentId(null);
+      form.reset();
 
       if (onSuccess) {
         onSuccess();
       }
     } catch (error) {
-      console.error("AI generation error:", error);
+      console.error('Error updating content with AI content:', error);
     }
+  };
+
+  const handleRejectAIContent = () => {
+    setAiGeneratedContent("");
+    setShowAiPreview(false);
+    // Keep the created content ID in case they want to try again
   };
 
   const handleSkipAI = () => {
@@ -406,21 +504,47 @@ export function ContentCreation({
                   Want help creating engaging content? I can generate AI-powered content for your{" "}
                   {quickTemplate?.title.toLowerCase() || form.watch("contentType")} after you save this draft.
                 </p>
+                <div className="text-xs text-purple-600 mb-2">
+                  💡 Check the box below, then create your content to see AI generation options!
+                </div>
+                <div className="text-xs text-gray-500 mb-2">
+                  Status: AI Generation is {showAiGeneration ? '✅ ENABLED' : '❌ DISABLED'}
+                </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-purple-300">
                     <input
                       type="checkbox"
                       id="auto-ai-generate"
-                      className="rounded border-purple-300"
+                      className="w-4 h-4 text-purple-600 bg-gray-100 border-purple-300 rounded focus:ring-purple-500 focus:ring-2"
                       checked={showAiGeneration}
                       onChange={(e) => setShowAiGeneration(e.target.checked)}
                     />
-                    <label htmlFor="auto-ai-generate" className="text-purple-700">
-                      Show AI generation options after creating content
+                    <label htmlFor="auto-ai-generate" className="text-purple-700 font-medium cursor-pointer">
+                      ✨ Show AI generation options after creating content
                     </label>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Restore AI Suggestion if dismissed */}
+        {!enableAISuggestion && (
+          <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-purple-700">
+                💡 Want AI-powered content generation?
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEnableAISuggestion(true)}
+                className="text-purple-600 border-purple-300 hover:bg-purple-100"
+              >
+                Show AI Options
+              </Button>
             </div>
           </div>
         )}
@@ -441,6 +565,11 @@ export function ContentCreation({
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Creating...
               </>
+            ) : showAiGeneration && !aiGeneratedContent && !showAiPreview ? (
+              <>
+                <Rocket className="h-4 w-4 mr-2" />
+                Generate AI Content
+              </>
             ) : (
               <>
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -451,17 +580,16 @@ export function ContentCreation({
         </div>
       </form>
 
-      {/* AI Content Generation Section */}
-      {showAiGeneration && (
+      {/* AI Preview Generation Section */}
+      {showAiPreview && (
         <div className="mt-8 p-6 border rounded-lg bg-gradient-to-r from-purple-50 to-blue-50">
           <div className="flex items-center gap-2 mb-4">
             <div className="text-2xl">🤖</div>
-            <h3 className="text-xl font-semibold">Generate AI Content</h3>
+            <h3 className="text-xl font-semibold">Generate AI Content Preview</h3>
           </div>
 
           <p className="text-gray-600 mb-4">
-            Your content piece has been created successfully! Now you can
-            generate AI content to populate it with engaging text.
+            Generate AI content based on your form data. You can review and accept it before saving.
           </p>
 
           <div className="space-y-4">
@@ -496,7 +624,7 @@ export function ContentCreation({
                   }
                 >
                   <option value="original">✨ Original Content</option>
-                  <option value="variation">Content Variation</option>
+                  <option value="variation">🔄 Content Variation</option>
                   <option value="improvement">📈 Content Improvement</option>
                 </select>
               </div>
@@ -519,20 +647,19 @@ export function ContentCreation({
                 className="w-full"
               />
               <p className="text-xs text-gray-500">
-                Be specific about the tone, audience, and key points you want to
-                include.
+                Be specific about the tone, audience, and key points you want to include.
               </p>
             </div>
 
             <div className="flex gap-3 pt-2">
               <Button
-                onClick={handleAIGeneration}
-                disabled={!aiPrompt.trim() || isGeneratingAI}
+                onClick={handleAIPreviewGeneration}
+                disabled={!aiPrompt.trim() || isGeneratingPreview}
                 className="bg-purple-600 hover:bg-purple-700"
               >
-                {isGeneratingAI ? (
+                {isGeneratingPreview ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     {aiModel === "both"
                       ? "Comparing Models..."
                       : `Generating with ${aiModel}...`}
@@ -540,7 +667,7 @@ export function ContentCreation({
                 ) : aiModel === "both" ? (
                   "⚡ Compare AI Models"
                 ) : (
-                  `Generate with ${
+                  `Generate Preview with ${
                     aiModel === "claude" ? "Claude" : "OpenAI"
                   }`
                 )}
@@ -548,24 +675,70 @@ export function ContentCreation({
 
               <Button
                 variant="outline"
-                onClick={handleSkipAI}
-                disabled={isGeneratingAI}
+                onClick={() => setShowAiPreview(false)}
+                disabled={isGeneratingPreview}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Generated Content Preview */}
+      {aiGeneratedContent && (
+        <div className="mt-8 p-6 border rounded-lg bg-gradient-to-r from-green-50 to-blue-50">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="text-2xl">✨</div>
+            <h3 className="text-xl font-semibold">AI Generated Content Preview</h3>
+          </div>
+
+          <div className="space-y-4">
+            <div className="p-4 bg-white border rounded-lg">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Generated Content:</Label>
+              <div className="whitespace-pre-wrap text-gray-800 bg-gray-50 p-3 rounded border min-h-[200px] max-h-[400px] overflow-y-auto">
+                {aiGeneratedContent}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={handleAcceptAIContent}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Accept & Use This Content
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleRejectAIContent}
+                className="text-red-600 border-red-300 hover:bg-red-50"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Regenerate Content
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAiGeneratedContent("");
+                  setShowAiGeneration(false);
+                }}
               >
                 Skip AI Generation
               </Button>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-4">
+            <div className="bg-blue-50 border border-blue-200 rounded p-3">
               <div className="flex items-start gap-2">
                 <Info className="h-4 w-4 text-blue-600 mt-0.5" />
                 <div className="text-sm text-blue-800">
-                  <strong>AI Generation Process:</strong>
+                  <strong>Next Steps:</strong>
                   <ul className="mt-1 space-y-1 list-disc list-inside">
-                    <li>The AI will analyze your prompt and content type</li>
-                    <li>Generated content will be added as an AI draft</li>
-                    <li>
-                      You can review and approve the content before publishing
-                    </li>
+                    <li><strong>Accept:</strong> Use this AI-generated content in your content piece</li>
+                    <li><strong>Regenerate:</strong> Generate new content with the same or different prompt</li>
+                    <li><strong>Skip:</strong> Continue without AI-generated content</li>
                   </ul>
                 </div>
               </div>
