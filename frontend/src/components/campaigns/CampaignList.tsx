@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { Campaign, CampaignStatus } from '@/types/campaign'
 import { useCampaigns } from '@/lib/hooks/api/campaigns/queries'
 import type { CampaignFilters } from '@/lib/api/types'
@@ -179,7 +180,11 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
             <Card key={campaign.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg leading-tight">{campaign.name}</CardTitle>
+                  <Link href={`/campaign/${campaign.id}`}>
+                    <CardTitle className="text-lg leading-tight hover:text-blue-600 cursor-pointer transition-colors">
+                      {campaign.name}
+                    </CardTitle>
+                  </Link>
                   <Badge className={getStatusColor(campaign.status as Campaign['status'])} variant="secondary">
                     {campaign.status}
                   </Badge>
@@ -244,9 +249,11 @@ export function CampaignList({ onCreateNew, onEditCampaign }: CampaignListProps)
                   >
                     📝 Edit
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
-                    📊 View Content
-                  </Button>
+                  <Link href={`/campaign/${campaign.id}`}>
+                    <Button variant="outline" size="sm" className="flex-1 w-full">
+                      📊 View Content
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

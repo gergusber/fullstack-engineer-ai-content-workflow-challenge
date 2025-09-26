@@ -1,20 +1,29 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ContentService } from '@/lib/services/content.service'
 import { queryKeys, getInvalidationKeys } from '@/lib/api/query-keys'
-import { CreateContentDto, TranslateContentDto, GenerateAIContentDto, UpdateReviewStateDto } from '@/lib/api/types'
+import { 
+  CreateContentPieceDto, 
+  UpdateContentPieceDto,
+  TranslateContentDto, 
+  GenerateAIContentDto, 
+  UpdateReviewStateDto,
+  SubmitForReviewDto,
+  ApproveContentDto,
+  RejectContentDto
+} from '@/types/content'
 import { toast } from 'sonner'
 
 export const useCreateContent = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (contentData: CreateContentDto) =>
+    mutationFn: (contentData: CreateContentPieceDto) =>
       ContentService.createContent(contentData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.content.lists() })
       toast.success('Content created successfully')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Failed to create content: ${error.message}`)
     }
   })
@@ -24,14 +33,14 @@ export const useUpdateContent = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateContentDto> }) =>
+    mutationFn: ({ id, data }: { id: string; data: UpdateContentPieceDto }) =>
       ContentService.updateContent(id, data),
     onSuccess: (result, variables) => {
       queryClient.setQueryData(queryKeys.content.detail(variables.id), result)
       queryClient.invalidateQueries({ queryKey: queryKeys.content.lists() })
       toast.success('Content updated successfully')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Failed to update content: ${error.message}`)
     }
   })
@@ -47,7 +56,7 @@ export const useDeleteContent = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.content.lists() })
       toast.success('Content deleted successfully')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Failed to delete content: ${error.message}`)
     }
   })
@@ -58,15 +67,15 @@ export const useSubmitForReview = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, comments }: { id: string; comments?: string }) =>
-      ContentService.submitForReview(id, comments),
+    mutationFn: ({ id, data }: { id: string; data: SubmitForReviewDto }) =>
+      ContentService.submitForReview(id, data),
     onSuccess: (_, variables) => {
       getInvalidationKeys.forContent(variables.id).forEach(key => {
         queryClient.invalidateQueries({ queryKey: key })
       })
       toast.success('Content submitted for review')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Failed to submit for review: ${error.message}`)
     }
   })
@@ -84,7 +93,7 @@ export const useUpdateReviewState = () => {
       })
       toast.success('Review state updated')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Failed to update review state: ${error.message}`)
     }
   })
@@ -94,17 +103,15 @@ export const useApproveContent = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, approveData }: {
-      id: string;
-      approveData: { reviewerId: string; reviewerName: string; comments?: string; publishImmediately?: boolean }
-    }) => ContentService.approveContent(id, approveData),
+    mutationFn: ({ id, approveData }: { id: string; approveData: ApproveContentDto }) => 
+      ContentService.approveContent(id, approveData),
     onSuccess: (_, variables) => {
       getInvalidationKeys.forContent(variables.id).forEach(key => {
         queryClient.invalidateQueries({ queryKey: key })
       })
       toast.success('Content approved successfully')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Failed to approve content: ${error.message}`)
     }
   })
@@ -114,17 +121,15 @@ export const useRejectContent = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, rejectData }: {
-      id: string;
-      rejectData: { reviewerId: string; reviewerName: string; reason: string; suggestions?: string }
-    }) => ContentService.rejectContent(id, rejectData),
+    mutationFn: ({ id, rejectData }: { id: string; rejectData: RejectContentDto }) => 
+      ContentService.rejectContent(id, rejectData),
     onSuccess: (_, variables) => {
       getInvalidationKeys.forContent(variables.id).forEach(key => {
         queryClient.invalidateQueries({ queryKey: key })
       })
       toast.success('Content rejected')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Failed to reject content: ${error.message}`)
     }
   })
@@ -142,7 +147,7 @@ export const useGenerateAIContent = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.content.detail(variables.id) })
       toast.success('AI content generated successfully')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Failed to generate AI content: ${error.message}`)
     }
   })
@@ -158,7 +163,7 @@ export const useCompareAIModels = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.content.aiDrafts(variables.id) })
       toast.success('AI model comparison completed')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Failed to compare AI models: ${error.message}`)
     }
   })
@@ -181,7 +186,7 @@ export const useTranslateContent = () => {
 
       toast.success('Content translated successfully - check pending AI draft translations for approval')
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Failed to translate content: ${error.message}`)
     }
   })

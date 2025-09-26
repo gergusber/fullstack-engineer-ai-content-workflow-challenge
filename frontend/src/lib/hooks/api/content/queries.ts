@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { ContentService } from '@/lib/services/content.service'
 import { queryKeys } from '@/lib/api/query-keys'
-import { ContentFilters } from '@/lib/api/types'
+import { ContentFiltersDto } from '@/types/content'
 
-export const useContentList = (filters?: ContentFilters) => {
+export const useContentList = (filters?: ContentFiltersDto) => {
   return useQuery({
     queryKey: queryKeys.content.list(filters || {}),
     queryFn: () => ContentService.getContentList(filters),
