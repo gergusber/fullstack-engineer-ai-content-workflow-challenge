@@ -59,7 +59,7 @@ export interface ContentPiece {
   priority: Priority;
   originalPrompt?: string;
   contentMetadata?: Record<string, any>;
-  translationOf?: string;
+  // translationOf field removed - translations are now in Translation entity only
   finalText?: string;
   versionHistory?: VersionHistoryEntry[];
   createdAt: string;
@@ -217,7 +217,7 @@ export interface CreateContentPieceDto {
   priority?: Priority;
   originalPrompt?: string;
   contentMetadata?: Record<string, any>;
-  translationOf?: string;
+  // translationOf field removed - use Translation entity instead
   finalText?: string;
   versionHistory?: VersionHistoryEntry[];
   createdBy?: string;
@@ -252,7 +252,7 @@ export interface ContentFiltersDto {
   limit?: number;
   sortBy?: 'createdAt' | 'updatedAt' | 'title' | 'priority' | 'reviewState';
   sortOrder?: 'ASC' | 'DESC';
-  excludeTranslations?: boolean; // Filter out content pieces that are translations
+  // excludeTranslations removed - translations no longer stored as content pieces
 }
 
 export interface UpdateReviewStateDto {
@@ -347,14 +347,7 @@ export interface AIGenerationResult {
 
 export interface TranslationResult {
   originalContent: ContentPiece;
-  translatedContent: ContentPiece;
-  translationResult: {
-    qualityScore: number;
-    aiDraft: AIDraft;
-    culturalNotes?: string;
-    translationStrategy?: string;
-    confidenceScore?: number;
-  };
+  translation: Translation; // Return Translation entity instead of ContentPiece
   translationMetadata: {
     sourceLanguage: string;
     targetLanguage: string;
@@ -389,7 +382,7 @@ export interface TranslationOverview {
   sourceContent: ContentPiece;
   translations: Array<{
     translation: Translation;
-    translatedContentPiece: ContentPiece;
+    // translatedContentPiece removed - no longer separate content pieces
     status: string;
     reviewRequired: boolean;
   }>;

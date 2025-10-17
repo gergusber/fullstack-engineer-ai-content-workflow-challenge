@@ -409,10 +409,7 @@ export class ContentService {
       );
     }
 
-    // Exclude translated content pieces (quick fix for translation architecture)
-    if (filters.excludeTranslations) {
-      queryBuilder.andWhere("content.translationOf IS NULL");
-    }
+    // Note: excludeTranslations filter removed - translations no longer stored as content pieces
   }
   private applyContentSorting(
     queryBuilder: SelectQueryBuilder<ContentPiece>,
@@ -700,60 +697,52 @@ export class ContentService {
     return { data, total };
   }
 
-  // New methods for enhanced functionality
+  // Translation methods - Refactored to use Translation entity only
 
   async createTranslation(
     sourceContentId: string,
-    createDto: CreateContentPieceDto,
-    translationResult?: any
-  ): Promise<ContentPiece> {
+    translateDto: any,
+    translationResult: any
+  ): Promise<Translation> {
     const sourceContent = await this.findOne(sourceContentId);
 
-    const translationDto = {
-      ...createDto,
-      translationOf: sourceContentId,
-      sourceLanguage: sourceContent.targetLanguage,
-    };
-
-    // Create the translated content piece
-    const translatedContent = await this.create(translationDto);
-
-    // Create the translation record if translation result is provided
-    if (translationResult) {
-      const translation = this.translationRepository.create({
-        contentPieceId: translatedContent.id,
-        sourceLanguage: createDto.sourceLanguage,
-        targetLanguage: createDto.targetLanguage,
-        translatedTitle: translationResult.translatedContent?.title,
-        translatedDesc: translationResult.translatedContent?.description,
-        translatedContent: {
-          title: translationResult.translatedContent?.title,
-          description: translationResult.translatedContent?.description,
-          body: translationResult.translatedContent?.body,
-          culturalNotes: translationResult.translatedContent?.culturalNotes,
-          translationStrategy: translationResult.translatedContent?.translationStrategy,
-          confidenceScore: translationResult.translatedContent?.confidenceScore,
-        },
-        modelUsed: translationResult.metadata?.model || 'claude',
-        translationContext: translationResult.metadata?.translationType || 'standard',
-        qualityScore: translationResult.qualityScore,
-        isHumanReviewed: false,
-      });
-
-      await this.translationRepository.save(translation);
-      console.log('Translation record created:', translation.id);
+    // Validate content is approved for translation
+    if (sourceContent.reviewState !== ReviewState.APPROVED) {
+      throw new BadRequestException('Content must be approved before translation');
     }
 
-    return translatedContent;
+    // Create ONLY translation record (no new content piece)
+    const translation = this.translationRepository.create({
+      contentPieceId: sourceContentId,  // Link to ORIGINAL content
+      sourceLanguage: translateDto.sourceLanguage || sourceContent.targetLanguage,
+      targetLanguage: translateDto.targetLanguage,
+      translatedTitle: translationResult.translatedContent?.title,
+      translatedDesc: translationResult.translatedContent?.description,
+      translatedContent: {
+        title: translationResult.translatedContent?.title,
+        description: translationResult.translatedContent?.description,
+        body: translationResult.translatedContent?.body,
+        culturalNotes: translationResult.translatedContent?.culturalNotes,
+        translationStrategy: translationResult.translatedContent?.translationStrategy,
+        confidenceScore: translationResult.translatedContent?.confidenceScore,
+      },
+      modelUsed: translationResult.metadata?.model || 'claude',
+      translationContext: translationResult.metadata?.translationType || 'standard',
+      qualityScore: translationResult.qualityScore,
+      isHumanReviewed: false,
+    });
+
+    const savedTranslation = await this.translationRepository.save(translation);
+    console.log('Translation record created:', savedTranslation.id);
+
+    return savedTranslation;
   }
 
-  async findTranslations(contentId: string): Promise<ContentPiece[]> {
-    return await this.contentRepository.find({
-      where: { translationOf: contentId },
+  async findTranslations(contentId: string): Promise<Translation[]> {
+    return await this.translationRepository.find({
+      where: { contentPieceId: contentId },
       relations: {
-        campaign: true,
-        aiDrafts: true,
-        reviews: true,
+        contentPiece: true,
       },
       order: {
         targetLanguage: 'ASC',
@@ -799,21 +788,13 @@ export class ContentService {
   }
 
   async getTranslationChain(contentId: string): Promise<{
-    source: ContentPiece | null;
-    translations: ContentPiece[];
+    source: ContentPiece;
+    translations: Translation[];
   }> {
     const content = await this.findOne(contentId);
+    const translations = await this.findTranslations(content.id);
 
-    let source: ContentPiece | null = null;
-    if (content.translationOf) {
-      source = await this.findOne(content.translationOf);
-    } else {
-      source = content;
-    }
-
-    const translations = await this.findTranslations(source.id);
-
-    return { source, translations };
+    return { source: content, translations };
   }
 
   // Translation methods
@@ -832,7 +813,6 @@ export class ContentService {
     sourceContent: ContentPiece;
     translations: Array<{
       translation: Translation;
-      translatedContentPiece: ContentPiece;
       status: string;
       reviewRequired: boolean;
     }>;
@@ -846,39 +826,12 @@ export class ContentService {
       order: { createdAt: 'DESC' },
     });
 
-    // Get the translated content pieces
-    const translationDetails = await Promise.all(
-      translations.map(async (translation) => {
-        try {
-          // Find the translated content piece by matching the translation relationship
-          const translatedContentPieces = await this.contentRepository.find({
-            where: {
-              translationOf: contentPieceId,
-              targetLanguage: translation.targetLanguage
-            },
-            order: { createdAt: 'DESC' }
-          });
-
-          const translatedContentPiece = translatedContentPieces[0]; // Get the most recent
-
-          return {
-            translation,
-            translatedContentPiece: translatedContentPiece || null,
-            status: translatedContentPiece?.reviewState || 'unknown',
-            reviewRequired: !translation.isHumanReviewed &&
-                           translatedContentPiece?.reviewState === ReviewState.PENDING_REVIEW
-          };
-        } catch (error) {
-          console.error(`Error fetching translated content for translation ${translation.id}:`, error);
-          return {
-            translation,
-            translatedContentPiece: null,
-            status: 'error',
-            reviewRequired: !translation.isHumanReviewed
-          };
-        }
-      })
-    );
+    // Map translations to details
+    const translationDetails = translations.map((translation) => ({
+      translation,
+      status: translation.isHumanReviewed ? 'approved' : 'pending_review',
+      reviewRequired: !translation.isHumanReviewed,
+    }));
 
     return {
       sourceContent,
@@ -891,31 +844,37 @@ export class ContentService {
     reviewerId: string,
     reviewerName: string,
     comments?: string
-  ): Promise<{ translation: Translation; translatedContent: ContentPiece }> {
+  ): Promise<Translation> {
     const translation = await this.translationRepository.findOne({
       where: { id: translationId },
+      relations: ['contentPiece'],
     });
 
     if (!translation) {
       throw new NotFoundException(`Translation with ID ${translationId} not found`);
     }
 
-    // Mark translation as human reviewed
+    // Mark translation as human reviewed and approved
     translation.isHumanReviewed = true;
-    await this.translationRepository.save(translation);
+    const updatedTranslation = await this.translationRepository.save(translation);
 
-    // Approve the translated content piece
-    const translatedContent = await this.updateReviewState(translation.contentPieceId, {
-      newState: ReviewState.APPROVED,
+    // Create a review record for the translation approval
+    await this.reviewRepository.create({
+      contentPieceId: translation.contentPieceId,
       reviewType: ReviewType.TRANSLATION_REVIEW,
       action: ReviewAction.APPROVE,
-      comments: comments || 'Translation approved',
+      previousState: translation.contentPiece.reviewState,
+      newState: translation.contentPiece.reviewState, // Keep same state for source content
+      comments: comments || `Translation to ${translation.targetLanguage} approved`,
       reviewerId,
       reviewerName,
       reviewerRole: 'Translation Reviewer',
+      contentPiece: translation.contentPiece,
     });
 
-    return { translation, translatedContent };
+    await this.reviewRepository.save(translation);
+
+    return updatedTranslation;
   }
 
   async rejectTranslation(
@@ -923,31 +882,39 @@ export class ContentService {
     reviewerId: string,
     reviewerName: string,
     reason: string
-  ): Promise<{ translation: Translation; translatedContent: ContentPiece }> {
+  ): Promise<Translation> {
     const translation = await this.translationRepository.findOne({
       where: { id: translationId },
+      relations: ['contentPiece'],
     });
 
     if (!translation) {
       throw new NotFoundException(`Translation with ID ${translationId} not found`);
     }
 
-    // Mark translation as human reviewed
+    // Mark translation as reviewed but rejected
     translation.isHumanReviewed = true;
-    await this.translationRepository.save(translation);
 
-    // Reject the translated content piece
-    const translatedContent = await this.updateReviewState(translation.contentPieceId, {
-      newState: ReviewState.REJECTED,
+    // Delete the rejected translation
+    await this.translationRepository.remove(translation);
+
+    // Create a review record for the translation rejection
+    const review = this.reviewRepository.create({
+      contentPieceId: translation.contentPieceId,
       reviewType: ReviewType.TRANSLATION_REVIEW,
       action: ReviewAction.REJECT,
-      comments: reason,
+      previousState: translation.contentPiece.reviewState,
+      newState: translation.contentPiece.reviewState, // Keep same state for source content
+      comments: reason || `Translation to ${translation.targetLanguage} rejected`,
       reviewerId,
       reviewerName,
       reviewerRole: 'Translation Reviewer',
+      contentPiece: translation.contentPiece,
     });
 
-    return { translation, translatedContent };
+    await this.reviewRepository.save(review);
+
+    return translation; // Return the translation before it was removed
   }
 
   async getPendingTranslations(): Promise<Array<{ translation: Translation; contentPiece: ContentPiece }>> {

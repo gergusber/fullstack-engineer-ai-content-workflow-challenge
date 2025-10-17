@@ -4,29 +4,20 @@ import { queryKeys } from '@/lib/api/query-keys'
 import { ContentFiltersDto } from '@/types/content'
 
 export const useContentList = (filters?: ContentFiltersDto) => {
-  // By default, exclude translated content pieces to avoid confusion
-  const filtersWithDefaults = {
-    excludeTranslations: true,
-    ...filters,
-  }
-
+  // Note: excludeTranslations removed - translations no longer stored as content pieces
   return useQuery({
-    queryKey: queryKeys.content.list(filtersWithDefaults),
-    queryFn: () => ContentService.getContentList(filtersWithDefaults),
+    queryKey: queryKeys.content.list(filters || {}),
+    queryFn: () => ContentService.getContentList(filters),
     staleTime: 2 * 60 * 1000, // 2 minutes
   })
 }
 
-// Hook for cases where we need to include all content including translations
+// Hook for backward compatibility - now behaves the same as useContentList
+// since translations are no longer stored as separate content pieces
 export const useAllContentList = (filters?: ContentFiltersDto) => {
-  const filtersWithTranslations = {
-    ...filters,
-    excludeTranslations: false, // Explicitly include translations
-  }
-
   return useQuery({
-    queryKey: queryKeys.content.list(filtersWithTranslations),
-    queryFn: () => ContentService.getContentList(filtersWithTranslations),
+    queryKey: queryKeys.content.list(filters || {}),
+    queryFn: () => ContentService.getContentList(filters),
     staleTime: 2 * 60 * 1000, // 2 minutes
   })
 }

@@ -8,6 +8,7 @@ import {
 } from "../entities/content-piece.entity";
 import { AIDraft, AIModel, GenerationType, DraftStatus } from "../entities/ai-draft.entity";
 import { Review, ReviewType, ReviewAction } from "../entities/review.entity";
+import { Translation } from "../entities/translation.entity";
 
 export class DatabaseSeeder {
   async run(): Promise<void> {
@@ -79,6 +80,7 @@ export class DatabaseSeeder {
       reviewState: ReviewState.AI_SUGGESTED,
       priority: Priority.HIGH,
       targetLanguage: "en",
+      sourceLanguage: "en",
       originalPrompt:
         "Create a compelling Black Friday headline that emphasizes urgency and savings",
       contentMetadata: {
@@ -140,6 +142,7 @@ export class DatabaseSeeder {
       ],
       priority: Priority.MEDIUM,
       targetLanguage: "en",
+      sourceLanguage: "en",
       originalPrompt:
         "Create an engaging email subject line for holiday gift guide",
     });
@@ -185,43 +188,26 @@ export class DatabaseSeeder {
 
     await reviewRepo.save(review1);
 
-    // Create Spanish translation of content 2
-    const content2Spanish = contentRepo.create({
-      campaignId,
-      title: "Guía de Regalos Navideños - Email Subject",
-      description: "Línea de asunto en español para el email de la guía de regalos navideños",
-      contentType: ContentType.EMAIL_SUBJECT,
-      reviewState: ReviewState.APPROVED,
-      priority: Priority.MEDIUM,
-      targetLanguage: "es",
+    // Create Spanish translation using the new Translation entity
+    const translationRepo = AppDataSource.getRepository(Translation);
+    const translation = translationRepo.create({
+      contentPieceId: savedContent2.id,
       sourceLanguage: "en",
-      translationOf: savedContent2.id,
-      finalText: "🎁 Regalos Navideños Perfectos para Todos en Tu Lista",
-      originalPrompt: "Traduce al español: Create an engaging email subject line for holiday gift guide",
-      contentMetadata: {
-        translationQuality: "professional",
-        localizedFor: "ES",
-        culturalAdaptations: ["emoji usage", "tone adaptation"]
+      targetLanguage: "es",
+      translatedTitle: "Guía de Regalos Navideños - Email Subject",
+      translatedDesc: "Línea de asunto en español para el email de la guía de regalos navideños",
+      translatedContent: {
+        title: "Guía de Regalos Navideños - Email Subject",
+        description: "Línea de asunto en español para el email de la guía de regalos navideños",
+        body: "🎁 Regalos Navideños Perfectos para Todos en Tu Lista"
       },
-      versionHistory: [
-        {
-          version: 1,
-          text: "Guía de Regalos Navideños - Encuentra Regalos Perfectos",
-          editedBy: "translation-ai",
-          editedAt: new Date('2024-11-22'),
-          changeReason: "Initial AI translation"
-        },
-        {
-          version: 2,
-          text: "🎁 Regalos Navideños Perfectos para Todos en Tu Lista",
-          editedBy: "maria.garcia",
-          editedAt: new Date('2024-11-22'),
-          changeReason: "Added emoji and improved Spanish phrasing for Latin American market"
-        }
-      ]
+      modelUsed: AIModel.CLAUDE_3_SONNET,
+      qualityScore: 0.92,
+      isHumanReviewed: true,
+      translationContext: "professional"
     });
 
-    await contentRepo.save(content2Spanish);
+    await translationRepo.save(translation);
   }
 
   private async createSampleContent2(campaignId: string): Promise<void> {
@@ -236,6 +222,7 @@ export class DatabaseSeeder {
       reviewState: ReviewState.DRAFT,
       priority: Priority.HIGH,
       targetLanguage: "en",
+      sourceLanguage: "en",
       originalPrompt:
         "Write a compelling product description for an AI assistant that helps with daily tasks",
       contentMetadata: {

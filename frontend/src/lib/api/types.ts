@@ -36,7 +36,7 @@ export interface ContentPiece extends BaseEntity {
   reviewState: 'draft' | 'ai_suggested' | 'pending_review' | 'reviewed' | 'approved' | 'rejected'
   priority: 'low' | 'medium' | 'high' | 'urgent'
   finalText?: string
-  translationOf?: string
+  // translationOf field removed - translations are now in Translation entity only
   contentMetadata?: Record<string, any>
 }
 
@@ -146,7 +146,7 @@ export interface DetailedTranslationOverview {
   sourceContent: ContentPiece
   translations: Array<{
     translation: Translation
-    translatedContentPiece: ContentPiece
+    // translatedContentPiece removed - no longer separate content pieces for translations
     status: string
     reviewRequired: boolean
   }>

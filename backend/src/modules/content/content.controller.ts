@@ -65,7 +65,6 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
       @Query('reviewState') reviewState?: ReviewState,
       @Query('contentType') contentType?: ContentType,
       @Query('language') language?: string,
-      @Query('excludeTranslations') excludeTranslations?: string,
       @Query('page') page: number = 1,
       @Query('limit') limit: number = 10,
     ) {
@@ -75,7 +74,6 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
           reviewState,
           contentType,
           language,
-          excludeTranslations: excludeTranslations === 'true',
           page: Math.max(1, page),
           limit: Math.min(50, Math.max(1, limit)), // Cap at 50 items
         };
@@ -372,7 +370,7 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
     @Post(':id/translate')
     @ApiOperation({
       summary: 'Translate content using AI',
-      description: 'Translates approved content to a target language using AI translation services (Claude or OpenAI)'
+      description: 'Translates approved content to a target language using AI translation services. Creates a Translation entity linked to the original content.'
     })
     @ApiParam({
       name: 'id',
@@ -394,21 +392,23 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
             title: 'Original Title',
             reviewState: 'approved'
           },
-          translatedContent: {
-            id: 'translated-id',
-            title: 'Título Traducido',
-            finalText: 'Contenido traducido...'
-          },
-          translationResult: {
+          translation: {
+            id: 'translation-id',
+            contentPieceId: 'original-id',
+            sourceLanguage: 'en',
+            targetLanguage: 'es',
+            translatedTitle: 'Título Traducido',
+            translatedDesc: 'Descripción traducida',
+            translatedContent: {
+              title: 'Título Traducido',
+              description: 'Descripción traducida',
+              body: 'Contenido traducido...',
+              culturalNotes: 'Adapted formal addressing for Spanish business culture',
+              translationStrategy: 'Localized approach',
+              confidenceScore: 0.89
+            },
             qualityScore: 0.92,
-            culturalNotes: 'Adapted formal addressing for Spanish business culture',
-            translationStrategy: 'Localized approach with cultural adaptation and market-specific terminology',
-            confidenceScore: 0.89,
-            aiDraft: {
-              id: 'draft-id',
-              modelUsed: 'claude',
-              generationType: 'translation'
-            }
+            isHumanReviewed: false
           },
           translationMetadata: {
             sourceLanguage: 'en',
@@ -456,43 +456,18 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
           3, // max retries
         );
 
-        // Create new content piece for translation
-        const translatedContent = await this.contentService.createTranslation(
+        // Create translation record (NOT a new content piece)
+        const translation = await this.contentService.createTranslation(
           content.id,
-          {
-            campaignId: content.campaignId,
-            contentType: content.contentType,
-            title: translationResult.translatedContent.title,
-            description: translationResult.translatedContent.description,
-            targetLanguage: translateDto.targetLanguage,
-            sourceLanguage: translateDto.sourceLanguage,
-            finalText: translationResult.translatedContent.body,
-            // reviewState: ReviewState.PENDING_REVIEW, // Set to pending review for translation approval
-            contentMetadata: {
-              translationQuality: translationResult.qualityScore,
-              aiModel: translateDto.model,
-              translationType: translateDto.translationType,
-              culturalNotes: translationResult.translatedContent.culturalNotes,
-              translationStrategy: translationResult.translatedContent.translationStrategy || 'Standard translation',
-              confidenceScore: translationResult.translatedContent.confidenceScore || 0.8,
-              suggestedImprovements: translationResult.translatedContent.suggestedImprovements || 'None',
-            },
-          },
-          translationResult, // Pass translation result to create translation record
+          translateDto,
+          translationResult,
         );
 
         return {
           success: true,
           data: {
             originalContent: content,
-            translatedContent,
-            translationResult: {
-              qualityScore: translationResult.qualityScore,
-              aiDraft: translationResult.aiDraft,
-              culturalNotes: translationResult.translatedContent.culturalNotes || 'No cultural notes',
-              translationStrategy: translationResult.translatedContent.translationStrategy || 'Standard translation',
-              confidenceScore: translationResult.translatedContent.confidenceScore || 0.8,
-            },
+            translation,  // Return Translation entity
             translationMetadata: translationResult.metadata,
           },
           message: `Content translated to ${translateDto.targetLanguage} successfully`,
@@ -757,7 +732,7 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
     @Get(':id/translations/detailed')
     @ApiOperation({
       summary: 'Get detailed translation overview for a content piece',
-      description: 'Returns comprehensive translation information including source content, translation records, translated content pieces, and review status'
+      description: 'Returns comprehensive translation information including source content and translation records with review status'
     })
     @ApiParam({
       name: 'id',
@@ -779,20 +754,27 @@ import { ReviewAction, ReviewType } from 'src/database/entities';
             {
               translation: {
                 id: 'translation-record-id',
+                contentPieceId: 'source-content-id',
                 sourceLanguage: 'en',
                 targetLanguage: 'es',
+                translatedTitle: 'Contenido en Español',
                 qualityScore: 0.87,
                 isHumanReviewed: false
-              },
-              translatedContentPiece: {
-                id: 'translated-content-id',
-                title: 'Contenido en Español',
-                reviewState: 'pending_review'
               },
               status: 'pending_review',
               reviewRequired: true
             }
-          ]
+          ],
+          summary: {
+            totalTranslations: 1,
+            pendingReview: 1,
+            approved: 0,
+            languages: ['es'],
+            reviewProgress: {
+              completed: 0,
+              pending: 1
+            }
+          }
         }
       }
     })

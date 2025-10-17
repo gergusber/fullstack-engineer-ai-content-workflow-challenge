@@ -109,7 +109,7 @@ export class ContentService {
     sourceContent: ContentPiece;
     pendingTranslations: Array<{
       translation: Translation;
-      translatedContentPiece: ContentPiece;
+      // translatedContentPiece removed - no longer separate content pieces
       status: string;
       reviewRequired: boolean;
     }>;

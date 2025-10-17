@@ -69,7 +69,6 @@ export class ContentFiltersDto {
   @IsEnum(["ASC", "DESC"])
   sortOrder?: "ASC" | "DESC" = "DESC";
 
-  @IsOptional()
-  @IsBoolean()
-  excludeTranslations?: boolean; // Filter out content pieces that are translations (have translationOf field)
+  // Removed excludeTranslations - no longer needed after translation architecture refactor
+  // Translations are no longer stored as separate content pieces
 }

@@ -47,7 +47,6 @@ export enum Priority {
 @Index(['campaignId', 'reviewState'])
 @Index(['contentType', 'targetLanguage'])
 @Index(['reviewState', 'priority'])
-@Index(['translationOf'])
 @Index(['sourceLanguage', 'targetLanguage'])
 export class ContentPiece {
   @PrimaryGeneratedColumn('uuid')
@@ -98,9 +97,6 @@ export class ContentPiece {
 
   @Column({ name: 'content_metadata', type: 'jsonb', nullable: true })
   contentMetadata: Record<string, any>;
-
-  @Column({ name: 'translation_of', nullable: true })
-  translationOf: string;
 
   @Column({ name: 'final_text', type: 'text', nullable: true })
   finalText: string;
