@@ -18,3 +18,7 @@ AI_DEFAULT_TEMPERATURE=0.3
 
 # Server Configuration
 PORT=3001
+
+# Clerk Configuration
+CLERK_SECRET_KEY=your_clerk_secret_key_here
+CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here

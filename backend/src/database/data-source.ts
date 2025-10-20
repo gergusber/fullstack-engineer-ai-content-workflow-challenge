@@ -8,6 +8,9 @@ import { Translation } from './entities/translation.entity';
 import { ContentVersion } from './entities/content-version.entity';
 import { ContentAnalytics } from './entities/content-analytics.entity';
 import { TaskQueue } from './entities/task-queue.entity';
+import { User } from './entities/user.entity';
+import { ContentAssignment } from './entities/content-assignment.entity';
+import { ActivityLog } from './entities/activity-log.entity';
 
 const configService = new ConfigService();
 
@@ -28,6 +31,9 @@ export const AppDataSource = new DataSource({
     ContentVersion,
     ContentAnalytics,
     TaskQueue,
+    User,
+    ContentAssignment,
+    ActivityLog,
   ],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
   synchronize: false, // Always false in production

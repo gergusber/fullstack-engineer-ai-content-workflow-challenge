@@ -5,9 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
   Index,
 } from 'typeorm';
 import { ContentPiece } from './content-piece.entity';
+import { User } from './user.entity';
 
 export enum CampaignStatus {
   DRAFT = 'draft',
@@ -47,7 +50,17 @@ export class Campaign {
   tags: string[];
 
   @Column({ name: 'created_by', nullable: true })
-  createdBy: string;
+  createdBy: string; // Legacy field - keep for backward compatibility
+
+  @Column({ name: 'created_by_user_id', nullable: true })
+  createdByUserId: string;
+
+  @ManyToOne(() => User, (user) => user.campaigns, { nullable: true })
+  @JoinColumn({ name: 'created_by_user_id' })
+  createdByUser: User;
+
+  @Column({ name: 'organization_id', nullable: true })
+  organizationId: string; // Clerk organization ID
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

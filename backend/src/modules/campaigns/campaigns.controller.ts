@@ -14,15 +14,25 @@ import {
   import { CreateCampaignDto } from './dto/create-campaign.dto';
   import { UpdateCampaignDto } from './dto/update-campaign.dto';
   import { CampaignStatus } from '../../database/entities/campaign.entity';
-  
+  import { CurrentUser } from '../../common/decorators/current-user.decorator';
+  import { User } from '../../database/entities/user.entity';
+  import { Public } from '../../common/decorators/public.decorator';
+
   @Controller('api/campaigns')
   export class CampaignsController {
     constructor(private readonly campaignsService: CampaignsService) {}
   
     @Post()
-    async create(@Body() createCampaignDto: CreateCampaignDto) {
+    async create(
+      @Body() createCampaignDto: CreateCampaignDto,
+      @CurrentUser() user: User,
+    ) {
       try {
-        const campaign = await this.campaignsService.create(createCampaignDto);
+        const campaign = await this.campaignsService.create(
+          createCampaignDto,
+          user?.clerkId,
+          user?.organizationId,
+        );
         return {
           success: true,
           data: campaign,
@@ -87,9 +97,17 @@ import {
     }
   
     @Patch(':id')
-    async update(@Param('id') id: string, @Body() updateCampaignDto: UpdateCampaignDto) {
+    async update(
+      @Param('id') id: string,
+      @Body() updateCampaignDto: UpdateCampaignDto,
+      @CurrentUser() user: User,
+    ) {
       try {
-        const campaign = await this.campaignsService.update(id, updateCampaignDto);
+        const campaign = await this.campaignsService.update(
+          id,
+          updateCampaignDto,
+          user?.clerkId,
+        );
         return {
           success: true,
           data: campaign,

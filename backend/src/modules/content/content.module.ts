@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ContentService } from './content.service';
 import { ContentController } from './content.controller';
@@ -9,6 +9,7 @@ import { Translation } from '../../database/entities/translation.entity';
 import { ContentVersion } from '../../database/entities/content-version.entity';
 import { ContentAnalytics } from '../../database/entities/content-analytics.entity';
 import { AIModule } from '../ai/ai.module'; // Import AI module
+import { ActivityModule } from '../activity/activity.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AIModule } from '../ai/ai.module'; // Import AI module
       ContentAnalytics,
     ]),
     AIModule,
+    forwardRef(() => ActivityModule),
   ],
   controllers: [ContentController],
   providers: [ContentService],

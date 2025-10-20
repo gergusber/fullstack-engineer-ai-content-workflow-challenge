@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Campaign, CampaignStatus } from '../../database/entities/campaign.entity';
 import { ContentPiece, ReviewState } from '../../database/entities/content-piece.entity';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
+import { ActivityService } from '../activity/activity.service';
+import { ActivityAction } from '../../database/entities/activity-log.entity';
 
 @Injectable()
 export class CampaignsService {
@@ -13,11 +15,56 @@ export class CampaignsService {
     private campaignsRepository: Repository<Campaign>,
     @InjectRepository(ContentPiece)
     private contentPiecesRepository: Repository<ContentPiece>,
+    @Inject(forwardRef(() => ActivityService))
+    private activityService: ActivityService,
   ) {}
 
-  async create(createCampaignDto: CreateCampaignDto): Promise<Campaign> {
-    const campaign = this.campaignsRepository.create(createCampaignDto);
-    return await this.campaignsRepository.save(campaign);
+  async create(createCampaignDto: CreateCampaignDto, userId?: string, organizationId?: string): Promise<Campaign> {
+    const campaignData: any = { ...createCampaignDto };
+
+    // Set user tracking if userId provided
+    if (userId) {
+      campaignData.createdByUserId = userId;
+    }
+
+    // Set organization if provided
+    if (organizationId) {
+      campaignData.organizationId = organizationId;
+    }
+
+    const campaign = this.campaignsRepository.create(campaignData);
+    const savedCampaign = await this.campaignsRepository.save(campaign);
+
+    // Reload campaign with all relations
+    const fullCampaign = await this.campaignsRepository.findOne({
+      where: { id: savedCampaign[0].id },
+      relations: {
+        createdByUser: true,
+        contentPieces: true,
+      },
+    });
+
+    // Log activity if userId provided
+    if (userId && this.activityService) {
+      try {
+        await this.activityService.logCampaign(
+          userId,
+          ActivityAction.CREATED,
+          fullCampaign.id,
+          fullCampaign.name,
+          organizationId,
+          {
+            targetMarkets: fullCampaign.targetMarkets,
+            tags: fullCampaign.tags,
+            status: fullCampaign.status,
+          },
+        );
+      } catch (error) {
+        console.error('Failed to log activity:', error);
+      }
+    }
+
+    return fullCampaign;
   }
 
   async findAll(): Promise<Campaign[]> {
@@ -56,10 +103,28 @@ export class CampaignsService {
     return campaign;
   }
 
-  async update(id: string, updateCampaignDto: UpdateCampaignDto): Promise<Campaign> {
+  async update(id: string, updateCampaignDto: UpdateCampaignDto, userId?: string): Promise<Campaign> {
     const campaign = await this.findOne(id);
     Object.assign(campaign, updateCampaignDto);
-    return await this.campaignsRepository.save(campaign);
+    const updatedCampaign = await this.campaignsRepository.save(campaign);
+
+    // Log activity if userId provided
+    if (userId && this.activityService) {
+      try {
+        await this.activityService.logCampaign(
+          userId,
+          ActivityAction.UPDATED,
+          updatedCampaign.id,
+          updatedCampaign.name,
+          campaign.organizationId,
+          { changes: Object.keys(updateCampaignDto) },
+        );
+      } catch (error) {
+        console.error('Failed to log activity:', error);
+      }
+    }
+
+    return updatedCampaign;
   }
 
   async remove(id: string): Promise<void> {

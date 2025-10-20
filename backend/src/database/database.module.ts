@@ -9,6 +9,9 @@ import { Translation } from './entities/translation.entity';
 import { ContentVersion } from './entities/content-version.entity';
 import { ContentAnalytics } from './entities/content-analytics.entity';
 import { TaskQueue } from './entities/task-queue.entity';
+import { User } from './entities/user.entity';
+import { ActivityLog } from './entities/activity-log.entity';
+import { ContentAssignment } from './entities/content-assignment.entity';
 
 @Module({
   imports: [
@@ -31,6 +34,9 @@ import { TaskQueue } from './entities/task-queue.entity';
             ContentVersion,
             ContentAnalytics,
             TaskQueue,
+            User,
+            ActivityLog,
+            ContentAssignment,
           ],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: configService.get('NODE_ENV') === 'development',

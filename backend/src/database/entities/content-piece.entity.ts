@@ -15,6 +15,8 @@ import { Review } from './review.entity';
 import { Translation } from './translation.entity';
 import { ContentVersion } from './content-version.entity';
 import { ContentAnalytics } from './content-analytics.entity';
+import { User } from './user.entity';
+import { ContentAssignment } from './content-assignment.entity';
 
 export enum ContentType {
   HEADLINE = 'headline',
@@ -110,6 +112,20 @@ export class ContentPiece {
     changeReason?: string;
   }>;
 
+  @Column({ name: 'created_by_user_id', nullable: true })
+  createdByUserId: string;
+
+  @ManyToOne(() => User, (user) => user.contentPieces, { nullable: true })
+  @JoinColumn({ name: 'created_by_user_id' })
+  createdByUser: User;
+
+  @Column({ name: 'last_edited_by_user_id', nullable: true })
+  lastEditedByUserId: string;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'last_edited_by_user_id' })
+  lastEditedByUser: User;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
@@ -150,4 +166,7 @@ export class ContentPiece {
     cascade: true,
   })
   analytics: ContentAnalytics[];
+
+  @OneToMany(() => ContentAssignment, (assignment) => assignment.contentPiece)
+  assignments: ContentAssignment[];
 }

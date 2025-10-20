@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, SelectQueryBuilder } from "typeorm";
 import {
@@ -15,6 +15,8 @@ import { UpdateContentPieceDto } from "./dto/update-content-piece.dto";
 import { UpdateReviewStateDto } from "./dto/update-review-state.dto";
 import { ContentFiltersDto } from "./dto/content-filters.dto";
 import { CreateAIDraftDto } from "./dto/create-ai-draft.dto";
+import { ActivityService } from "../activity/activity.service";
+import { ActivityAction } from "../../database/entities/activity-log.entity";
 
 @Injectable()
 export class ContentService {
@@ -28,22 +30,61 @@ export class ContentService {
     @InjectRepository(ContentVersion)
     private contentVersionRepository: Repository<ContentVersion>,
     @InjectRepository(Translation)
-    private translationRepository: Repository<Translation>
+    private translationRepository: Repository<Translation>,
+    @Inject(forwardRef(() => ActivityService))
+    private activityService: ActivityService,
   ) {}
 
-  async create(createContentDto: CreateContentPieceDto): Promise<ContentPiece> {
-    const contentPiece = this.contentRepository.create(createContentDto);
+  async create(createContentDto: CreateContentPieceDto, userId?: string): Promise<ContentPiece> {
+    const contentData: any = { ...createContentDto };
+
+    // Set user tracking if userId provided
+    if (userId) {
+      contentData.createdByUserId = userId;
+      contentData.lastEditedByUserId = userId;
+    }
+
+    const contentPiece = this.contentRepository.create(contentData);
     const savedContent = await this.contentRepository.save(contentPiece);
 
-    // Create initial version
-    await this.createVersion(savedContent.id, {
-      title: savedContent.title,
-      description: savedContent.description,
-      changeReason: "Initial version",
-      changedBy: createContentDto.createdBy || "system",
+    // Reload content piece with all relations
+    const fullContentPiece = await this.contentRepository.findOne({
+      where: { id: savedContent[0].id },
+      relations: {
+        campaign: true,
+        aiDrafts: true,
+        reviews: true,
+        translations: true,
+        contentVersions: true,
+        analytics: true,
+      },
     });
 
-    return savedContent;
+    // Create initial version
+    await this.createVersion(fullContentPiece.id, {
+      title: fullContentPiece.title,
+      description: fullContentPiece.description,
+      changeReason: "Initial version",
+      changedBy: createContentDto.createdBy || userId || "system",
+    });
+
+    // Log activity if userId provided
+    if (userId && this.activityService) {
+      try {
+        await this.activityService.logContent(
+          userId,
+          ActivityAction.CREATED,
+          fullContentPiece.id,
+          fullContentPiece.title,
+          undefined,
+          { contentType: fullContentPiece.contentType },
+        );
+      } catch (error) {
+        console.error('Failed to log activity:', error);
+      }
+    }
+
+    return fullContentPiece;
   }
 
   async findAll(): Promise<ContentPiece[]> {
@@ -92,11 +133,18 @@ export class ContentService {
 
   async update(
     id: string,
-    updateContentDto: UpdateContentPieceDto
+    updateContentDto: UpdateContentPieceDto,
+    userId?: string
   ): Promise<ContentPiece> {
     const content = await this.findOne(id);
 
-    Object.assign(content, updateContentDto);
+    // Set last edited user if userId provided
+    const updateData: any = { ...updateContentDto };
+    if (userId) {
+      updateData.lastEditedByUserId = userId;
+    }
+
+    Object.assign(content, updateData);
     const updatedContent = await this.contentRepository.save(content);
 
     // Create version if content changed
@@ -105,8 +153,24 @@ export class ContentService {
         title: updatedContent.title,
         description: updatedContent.description,
         changeReason: updateContentDto.changeReason || "Content updated",
-        changedBy: updateContentDto.updatedBy || "system",
+        changedBy: updateContentDto.updatedBy || userId || "system",
       });
+    }
+
+    // Log activity if userId provided
+    if (userId && this.activityService) {
+      try {
+        await this.activityService.logContent(
+          userId,
+          ActivityAction.UPDATED,
+          updatedContent.id,
+          updatedContent.title,
+          undefined,
+          { changes: Object.keys(updateContentDto) },
+        );
+      } catch (error) {
+        console.error('Failed to log activity:', error);
+      }
     }
 
     return updatedContent;
@@ -114,7 +178,8 @@ export class ContentService {
 
   async updateReviewState(
     id: string,
-    updateStateDto: UpdateReviewStateDto
+    updateStateDto: UpdateReviewStateDto,
+    userId?: string
   ): Promise<ContentPiece> {
     if (!id) {
       throw new Error('Content piece ID is required');
@@ -189,6 +254,32 @@ export class ContentService {
     // return await this.contentRepository.save(content);
     // Perform a lightweight update to avoid relation cascades
     await this.contentRepository.update(id, contentUpdate);
+
+    // Log activity if userId provided
+    if (userId && this.activityService) {
+      try {
+        const action = updateStateDto.newState === ReviewState.APPROVED
+          ? ActivityAction.APPROVED
+          : updateStateDto.newState === ReviewState.REJECTED
+          ? ActivityAction.REJECTED
+          : ActivityAction.REVIEWED;
+
+        await this.activityService.logContent(
+          userId,
+          action,
+          content.id,
+          content.title,
+          undefined,
+          {
+            previousState,
+            newState: updateStateDto.newState,
+            comments: updateStateDto.comments,
+          },
+        );
+      } catch (error) {
+        console.error('Failed to log activity:', error);
+      }
+    }
 
     // Return the fresh entity
     return await this.findOne(id);

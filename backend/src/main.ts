@@ -3,12 +3,22 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { createClerkClient } from '@clerk/clerk-sdk-node';
 
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
+
+  // Initialize Clerk with secret key
+  const clerkSecretKey = configService.get('CLERK_SECRET_KEY');
+  if (clerkSecretKey && clerkSecretKey !== 'secret') {
+    createClerkClient({ secretKey: clerkSecretKey });
+    console.log('Clerk initialized successfully');
+  } else {
+    console.warn('Clerk secret key not configured or using default value');
+  }
 
  // Enable CORS
  app.enableCors({
